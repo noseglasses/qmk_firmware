@@ -35,6 +35,15 @@ void *mm_create_cluster(
 
 void mm_add_melody(int count, ...);
 
+/* This method simplifies defining node lines or tap dances
+ */
+void mm_add_note_line(uint16_t action_keycode, 
+							 int count, ...);
+
+void mm_add_tap_dance(uint16_t action_keycode, 
+							 int n_taps, 
+							 keypos_t curKeypos);
+
 void mm_set_abort_keypos(keypos_t keypos);
 
 void mm_set_timeout_ms(uint16_t timeout);
@@ -43,15 +52,18 @@ void mm_set_timeout_ms(uint16_t timeout);
 
 #define MM_KEYPOS(ROW, COL) (keypos_t){.row = ROW, .col = COL}
 
-/* Do not call functions defined below this line when defining keymaps.
- * Those methods are reserved for quantums internal use.
- */
-
 /* Is finalization required?
  */
 void mm_finalize_magic_melodies(void);
 
+/* Call this function from process_record_user
+ */
 bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record);
+
+/* Add this function to your implementation of matrix_scan_user.
+ * It returns true on timeout.
+ */
+bool mm_check_timeout(void);
 
 #endif /*ifdef MAGIC_MELODIES_ENABLE*/
 
