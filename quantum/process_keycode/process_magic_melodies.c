@@ -14,13 +14,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "quantum.h"
-
 #ifdef MAGIC_MELODIES_ENABLE
+
+#include "process_magic_melodies.h"
+#include "assert.h"
 
 #define MM_MAX_KEYCHANGES 100
 
-#define MM_DEFAULT_ROW_LENGTH 7
+#define MM_DEFAULT_KEYPRESS_TIMEOUT 200
+
+/* This function is defined in quantum/keymap_common.c 
+ */
+action_t action_for_configured_keycode(uint16_t keycode);
 
 static bool mm_keypos_equal(keypos_t kp1, keypos_t kp2)
 {
@@ -28,12 +33,31 @@ static bool mm_keypos_equal(keypos_t kp1, keypos_t kp2)
 				&&	(kp1.col == kp2.col);
 }
 
+struct MM_PhraseStruct;
+
+typedef uint8_t (*MM_Phrase_Consider_Keychange_Fun)(	struct MM_PhraseStruct *a_This, 
+														uint16_t keycode, 
+														keyrecord_t *record);
+
+typedef uint8_t (*MM_Phrase_Successor_Consider_Keychange_Fun)(
+														struct MM_PhraseStruct *a_This, 
+														uint16_t keycode, 
+														keyrecord_t *record);
+
+typedef void (*MM_Phrase_Reset_Fun)(	struct MM_PhraseStruct *a_This);
+
+typedef void (*MM_Phrase_Trigger_Action_Fun)(	struct MM_PhraseStruct *a_This);
+
+typedef struct MM_PhraseStruct * (*MM_Phrase_Destroy_Fun)(struct MM_PhraseStruct *a_This);
+
+typedef bool (*MM_Phrase_Equals_Fun)(struct MM_PhraseStruct *p1, struct MM_PhraseStruct *p2);
+
 typedef struct {
 	
 	MM_Phrase_Consider_Keychange_Fun 
 									consider_keychange;
 									
-	MM_Phrase_Subphrase_Consider_Keychange_Fun 
+	MM_Phrase_Successor_Consider_Keychange_Fun 
 									successor_consider_keychange;
 									
 	MM_Phrase_Reset_Fun
@@ -44,11 +68,15 @@ typedef struct {
 									
 	MM_Phrase_Destroy_Fun	
 									destroy;
+			
+	MM_Phrase_Equals_Fun
+									equals;
+									
 } MM_Phrase_Vtable;
 
 typedef struct MM_PhraseStruct {
 	
-    MM_MM_Phrase_Vtable vtable;
+    MM_Phrase_Vtable *vtable;
 	 
 	 struct MM_PhraseStruct *parent;
 	 
@@ -65,11 +93,10 @@ typedef struct MM_PhraseStruct {
 
 typedef struct
 {
-  uint16_t melody_start_timer;
   uint16_t n_keys_changed;
   bool pressed[MM_MAX_KEYCHANGES];
   keypos_t keypos[MM_MAX_KEYCHANGES];
-  uint16_t keytimers[MM_MAX_KEYCHANGES];
+  uint16_t keytimes[MM_MAX_KEYCHANGES];
   
   MM_Phrase melody_root;
   bool melody_root_initialized;
@@ -80,16 +107,20 @@ typedef struct
   
   keypos_t abort_keypos;
   
+  uint16_t time_last_keypress;
+  
+  uint16_t keypress_timeout;
+  
 } MM_Magic_Melody_State;
 
 static MM_Magic_Melody_State mm_state = 
 {
-	.timer = 0,
 	.n_keys_changed = 0,
 	.melody_root_initialized = false,
 	.current_phrase = NULL,
 	.magic_melodies_temporarily_disabled = false,
-	.abort_keypos = { .row = 100, .col = 100 }
+	.abort_keypos = { .row = 100, .col = 100 },
+	.keypress_timeout = MM_DEFAULT_KEYPRESS_TIMEOUT
 };
 
 enum {
@@ -103,34 +134,30 @@ static void mm_store_keychange(uint16_t keycode,
 {
 	assert(mm_state.n_keys_changed < MM_MAX_KEYCHANGES);
 	
-	mm_state.pressed[n_keys_changed] = record->pressed;
-	mm_state.keypos[n_keys_changed] = record->event.key;
-	mm_state.keytimers[n_keys_changed] = record->event.timer;
+	mm_state.pressed[mm_state.n_keys_changed] = record->event.pressed;
+	mm_state.keypos[mm_state.n_keys_changed] = record->event.key;
+	mm_state.keytimes[mm_state.n_keys_changed] = record->event.time;
 	
 	++mm_state.n_keys_changed;
 }
 
-static void mm_flush_stored_keychanges()
+static void mm_flush_stored_keychanges(void)
 {
 	if(mm_state.n_keys_changed == 0) { return; }
 	
 	/* Process all events as if they had happened just now */
 	
 	mm_state.magic_melodies_temporarily_disabled = true;
-	
-	uint16_t i;
-	
-	keyrecord_t record;
        
-	uint16_t cur_time = timer_read ();
+	uint16_t cur_time = timer_read();
 	
-	uint16_t first_key_timer = mm_state.keytimers[0];
+	uint16_t actualOffset = cur_time - mm_state.keytimes[mm_state.n_keys_changed - 1];
 	
-	uint16_t actualOffset = cur_time - mm_state.keytimers[mm_state.n_keys_changed - 1];
-	
-	for(i = 0; i < mm_state.n_keys_changed; ++i) {
+	for(uint16_t i = 0; i < mm_state.n_keys_changed; ++i) {
 		
-		record.event.timer = mm_state.keytimers[i] + actualOffset;
+		keyrecord_t record;
+		
+		record.event.time = mm_state.keytimes[i] + actualOffset;
 		record.event.key = mm_state.keypos[i];
 		record.event.pressed = mm_state.pressed[i];
 		
@@ -140,7 +167,7 @@ static void mm_flush_stored_keychanges()
 	mm_state.magic_melodies_temporarily_disabled = false;
 }
 
-static void mm_cleanup()
+static void mm_cleanup(void)
 {
 	mm_flush_stored_keychanges();
 	
@@ -148,28 +175,9 @@ static void mm_cleanup()
 	mm_state.current_phrase = NULL;
 }
 
-typedef uint8_t (*MM_Phrase_Consider_Keychange_Fun)(	MM_Phrase *a_This, 
-														uint16_t keycode, 
-														keyrecord_t *record);
-
-typedef uint8_t (*MM_Phrase_Subphrase_Consider_Keychange_Fun)(
-														MM_Phrase *a_This, 
-														uint16_t keycode, 
-														keyrecord_t *record);
-
-typedef void (*MM_Phrase_Reset_Fun)(	MM_Phrase *a_This);
-
-typedef void (*MM_Phrase_Trigger_Action_Fun)(	MM_Phrase *a_This);
-
-typedef MM_Phrase * (*MM_Phrase_Destroy_Fun)(MM_Phrase *a_This);
-
-static MM_Phrase *mm_phrase_alloc(){
-    return (MM_Phrase*)malloc(sizeof(MM_Phrase));
-}
-
 static void mm_phrase_reset(	MM_Phrase *a_This)
 {
-	state = MM_Phrase_In_Progress;
+	a_This->state = MM_Phrase_In_Progress;
 }
 
 /* Phrases have states. This method resets the states
@@ -181,14 +189,26 @@ static void mm_phrase_reset_recursively(	MM_Phrase *a_This)
 {
 	/* Reset all successor phrases if there are any
 	 */
-	uint8_t i;
-	for(i = 0; i < a_This.n_successors; ++i) {
-		a_This->successors[i]->vtable.reset(a_This->successors[i]);
+	for(uint8_t i = 0; i < a_This->n_successors; ++i) {
+		a_This->successors[i]->vtable->reset(a_This->successors[i]);
 	}
 		
 	if(a_This->parent) {
 		mm_phrase_reset_recursively(a_This->parent);
 	}		
+}
+	
+static void mm_abort_magic_melody(void)
+{		
+	if(!mm_state.current_phrase) { return; }
+	
+	/* The frase could not be parsed. Reset any previous phrases.
+	*/
+	mm_phrase_reset_recursively(mm_state.current_phrase);
+	
+	/* Cleanup and issue all keypresses as if they happened without parsing a melody
+	*/
+	mm_cleanup();
 }
 
 static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
@@ -198,23 +218,21 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 	/* Loop over all phrases and inform them about the 
 	 * keychange 
 	 */
-	uint8_t i;
-	uint8_t successor_process_result;
 	bool all_successors_invalid = true;
 	
 	MM_Phrase *a_current_phrase = *current_phrase;
 	
 	mm_store_keychange(keycode, record);
 	
-	for(i = 0; i < a_current_phrase->n_successors; ++i) {
+	for(uint8_t i = 0; i < a_current_phrase->n_successors; ++i) {
 		
-		if(a_current_phrase->successors[i].phrase_inventory.state == MM_Phrase_Invalid) {
+		if(a_current_phrase->successors[i]->state == MM_Phrase_Invalid) {
 			continue;
 		}
 		
-		successor_process_result 
+		uint8_t successor_process_result 
 			= a_current_phrase->successors[i]
-					->vtable.successor_consider_keychange(	
+					->vtable->successor_consider_keychange(	
 																	a_current_phrase, 
 																	keycode,
 																	record
@@ -231,16 +249,16 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 				/* The successor that is first completed becomes the 
 				 * new current phrase
 				 */
-				current_phrase = &a_current_phrase->successors[i]);
+				current_phrase = &a_current_phrase->successors[i];
 				a_current_phrase = *current_phrase;
 				
 				/* The melody is finished. Trigger the associated action.
 				 */
 				if(0 == a_current_phrase->n_successors) {
 					
-					a_current_phrase->vtable.trigger_action(a_current_phrase);
+					a_current_phrase->vtable->trigger_action(a_current_phrase);
 					
-					mm_phrase_reset_recursively(a_current_phrase.parent);
+					mm_phrase_reset_recursively(a_current_phrase->parent);
 					
 					return MM_Phrase_Completed;
 				}
@@ -250,13 +268,7 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 		
 	if(all_successors_invalid) {
 		
-		/* The frase could not be parsed. Reset any previous phrases.
-		 */
-		mm_phrase_reset_recursively(a_current_phrase);
-		
-		/* Cleanup and issue all keypresses as if they happened without parsing a melody
-			*/
-		mm_cleanup();
+		mm_abort_magic_melody();
 		
 		return MM_Phrase_Invalid;
 	}
@@ -267,7 +279,20 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 static void mm_phrase_trigger_action(MM_Phrase *a_MM_Phrase) {
 	
 	if(a_MM_Phrase->action_keycode != 0) {
-		Trigger the action that is associated with the keycode
+		
+		/* Construct a dummy record
+		 */
+		keyrecord_t record;
+			record.event.key.row = 0;
+			record.event.key.col = 0;
+			record.event.pressed = true;
+			record.event.time = timer_read();
+		
+		uint16_t configured_keycode = keycode_config(a_MM_Phrase->action_keycode);
+		
+		action_t action = action_for_configured_keycode(configured_keycode); 
+    
+		process_action(&record, action);
 	}
 }
 
@@ -278,29 +303,53 @@ static void mm_phrase_allocate_successors(MM_Phrase *a_This, uint8_t n_successor
 	 a_This->n_allocated_successors = n_successors;
 }
 
+static void mm_phrase_grow_successors(MM_Phrase *a_This) {
+
+	if(a_This->n_allocated_successors == 0) {
+		
+		mm_phrase_allocate_successors(a_This, 1);
+	}
+	else {
+		MM_Phrase **oldSucessors = a_This->successors;
+		
+		mm_phrase_allocate_successors(a_This, 2*a_This->n_allocated_successors);
+			
+		for(uint8_t i = 0; i < a_This->n_successors; ++i) {
+			a_This->successors[i] = oldSucessors[i];
+		}
+		
+		free(oldSucessors); 
+	}
+}
+
+static void mm_phrase_add_successor(MM_Phrase *a_This, MM_Phrase *successor) {
+	
+	if(a_This->n_allocated_successors == a_This->n_successors) {
+		mm_phrase_grow_successors(a_This);
+	}
+	
+	a_This->successors[a_This->n_successors] = successor;
+	
+	successor->parent = a_This;
+	
+	++a_This->n_successors;
+}
+
+static void mm_phrase_free(MM_Phrase *a_This);
+
 static void mm_phrase_free_successors(MM_Phrase *a_This)
 {
 	if(!a_This->successors) { return; }
 	
-	int i;
-	
-	for(i = 0; i < a_This->n_allocated_successors; ++i) {
-		a_This->successors[i]->vtable.destroy(a_This->successors[i]);
-		free(a_This->successors[i]);
+	for(uint8_t i = 0; i < a_This->n_allocated_successors; ++i) {
+		
+		mm_phrase_free(a_This->successors[i]);
 	}
 	
 	free(a_This->successors);
 	
 	a_This->successors = NULL;
 	a_This->n_allocated_successors = 0;
-}
-
-static void mm_phrase_add_successor(MM_Phrase *a_This, MM_Phrase *successor)
-{
-	assert(a_This->n_successors < a_This->n_allocated_successors);
-	assert(a_This->successors);
-	
-	a_This->successors[n_successors] = successor;
 }
 
 static MM_Phrase* mm_phrase_destroy(MM_Phrase *a_MM_Phrase) {
@@ -310,14 +359,56 @@ static MM_Phrase* mm_phrase_destroy(MM_Phrase *a_MM_Phrase) {
 	return a_MM_Phrase;
 }
 
+static bool mm_phrase_equals(MM_Phrase *p1, MM_Phrase *p2) 
+{
+	if(p1->vtable != p2->vtable) { return false; }
+	
+	return p1->vtable->equals(p1, p2);
+}
+
+static void mm_phrase_free(MM_Phrase *a_This) {
+    a_This->vtable->destroy(a_This);
+
+    free(a_This);
+}
+
+static MM_Phrase* mm_phrase_get_equivalent_successor(
+														MM_Phrase *a_MM_Phrase,
+														MM_Phrase *sample) {
+	
+	if(a_MM_Phrase->n_successors == 0) { return NULL; }
+	
+	for(uint8_t i = 0; i < a_MM_Phrase->n_successors; ++i) {
+		if(mm_phrase_equals(
+											a_MM_Phrase->successors[i], 
+											sample)
+		  ) {
+			return a_MM_Phrase->successors[i];
+		}
+	}
+	
+	return NULL;
+}
+
+static MM_Phrase_Vtable mm_phrase_vtable =
+{
+	.consider_keychange 
+		= (MM_Phrase_Consider_Keychange_Fun) mm_phrase_consider_keychange,
+	.successor_consider_keychange 
+		= NULL,
+	.reset 
+		= (MM_Phrase_Reset_Fun) mm_phrase_reset,
+	.trigger_action 
+		= (MM_Phrase_Trigger_Action_Fun) mm_phrase_trigger_action,
+	.destroy 
+		= (MM_Phrase_Destroy_Fun) mm_phrase_destroy,
+	.equals
+		= NULL
+};
+
 static MM_Phrase *mm_phrase_new(MM_Phrase *a_MM_Phrase) {
 	
-    a_MM_Phrase->vtable.consider_keychange 
-		= (MM_Phrase_Consider_Keychange_Fun) mm_phrase_consider_keychange;
-    a_MM_Phrase->vtable.successor_consider_keychange = NULL;
-    a_MM_Phrase->vtable.reset = (MM_Phrase_Reset_Fun) mm_phrase_reset;
-    a_MM_Phrase->vtable.trigger_action = (MM_Phrase_Trigger_Action_Fun) mm_phrase_trigger_action;
-    a_MM_Phrase->vtable.destroy = (MM_Phrase_Destroy_Fun) mm_phrase_destroy;
+    a_MM_Phrase->vtable = &mm_phrase_vtable;
 	 
     a_MM_Phrase->parent = NULL;
     a_MM_Phrase->successors = NULL;
@@ -327,12 +418,6 @@ static MM_Phrase *mm_phrase_new(MM_Phrase *a_MM_Phrase) {
     a_MM_Phrase->state = MM_Phrase_In_Progress;
 	 
     return a_MM_Phrase;
-}
-
-static void mm_phrase_free(MM_Phrase *a_This) {
-    a_This->vtable.destroy(a_This);
-
-    free(a_This);
 }
 
 /*****************************************************************************
@@ -347,32 +432,53 @@ typedef struct {
 	 
 } MM_Note;
 
-static uint8_t mm_note_subphrase_consider_keychange(	
+static uint8_t mm_note_successor_consider_keychange(	
 											MM_Note *a_This,
 											uint16_t keycode, 
 											keyrecord_t *record) 
 {
 	/* Only react on pressed keys 
 	 */
-	if(!record->event.pressed) return;
+	if(!record->event.pressed) return MM_Phrase_In_Progress;
 	
-	assert(a_This->phrase_inventory->state == MM_Phrase_In_Progress);
+	assert(a_This->phrase_inventory.state == MM_Phrase_In_Progress);
 	
 	/* Set state appropriately 
 	 */
-	if(mm_keypos_equal(&a_This->keypos, &record->event.key)) {
-		a_This->phrase_inventory->state = MM_Phrase_Completed;
+	if(mm_keypos_equal(a_This->keypos, record->event.key)) {
+		a_This->phrase_inventory.state = MM_Phrase_Completed;
 	}
 	else {
-		a_This->phrase_inventory->state = MM_Phrase_Invalid;
+		a_This->phrase_inventory.state = MM_Phrase_Invalid;
 	}
 	
-	return a_This->phrase_inventory->state;
+	return a_This->phrase_inventory.state;
 }
 
-static MM_Note *mm_note_alloc(){
+static MM_Note *mm_note_alloc(void) {
     return (MM_Note*)malloc(sizeof(MM_Note));
 }
+
+static bool mm_note_equals(MM_Note *n1, MM_Note *n2) 
+{
+	return mm_keypos_equal(n1->keypos, n2->keypos);
+}
+
+static MM_Phrase_Vtable mm_note_vtable =
+{
+	.consider_keychange 
+		= (MM_Phrase_Consider_Keychange_Fun) mm_phrase_consider_keychange,
+	.successor_consider_keychange 
+		= (MM_Phrase_Successor_Consider_Keychange_Fun) mm_note_successor_consider_keychange,
+	.reset 
+		= (MM_Phrase_Reset_Fun) mm_phrase_reset,
+	.trigger_action 
+		= (MM_Phrase_Trigger_Action_Fun) mm_phrase_trigger_action,
+	.destroy 
+		= (MM_Phrase_Destroy_Fun) mm_phrase_destroy,
+	.equals
+		= (MM_Phrase_Equals_Fun) mm_note_equals
+};
 
 static MM_Note *mm_note_new(MM_Note *a_note)
 {
@@ -380,33 +486,12 @@ static MM_Note *mm_note_new(MM_Note *a_note)
 	  */
     mm_phrase_new((MM_Phrase*)a_note);
 
-    a_note->vtable.successor_consider_keychange 
-		= (MM_Phrase_Subphrase_Consider_Keychange_Fun) mm_note_subphrase_consider_keychange;
-    a_note->vtable.trigger_action 
-		= (MM_Phrase_Trigger_Action_Fun) mm_note_trigger_action;
-    a_note->vtable.destroy 
-		= (MM_Phrase_Destroy_Fun) mm_note_destroy;
+    a_note->phrase_inventory.vtable = &mm_note_vtable;
 		
 	 a_note->keypos.row = 100;
 	 a_note->keypos.col = 100;
 	 
     return a_note;
-}
-
-static MM_Note *mm_init_and_register_note(
-									MM_Phrase *end_of_melody, 
-									keypos_t keypos)
-{
-    MM_Note *a_note = (MM_Note*)mm_note_new(mm_note_alloc());
-	
-	 a_note->phrase_inventory.parent = end_of_melody;
-	 
-	 a_note->keypos = keypos;
-	 
-	 mm_phrase_add_successor(end_of_melody, a_note);
-	 
-	 /* Return the new end of the melody */
-	 return a_note;
 }
 
 /*****************************************************************************
@@ -424,40 +509,35 @@ typedef struct {
 	 
 } MM_Chord;
 
-static uint8_t mm_chord_subphrase_consider_keychange(	
+static uint8_t mm_chord_successor_consider_keychange(	
 											MM_Chord *a_This,
 											uint16_t keycode, 
 											keyrecord_t *record) 
 {
 	bool key_part_of_chord = false;
-	uint8_t i;
 	
 	assert(a_This->n_members != 0);
 	
-	/* Only react on pressed keys 
-	 */
-	if(!record->event.pressed) return;
-	
-	assert(a_This->phrase_inventory->state == MM_Phrase_In_Progress);
+	assert(a_This->phrase_inventory.state == MM_Phrase_In_Progress);
 	
 	/* Check it the key is part of the current chord 
 	 */
-	for(i = 0; i < a_This->n_members; ++i) {
+	for(uint8_t i = 0; i < a_This->n_members; ++i) {
 		
-		if(mm_keypos_equal(a_This->keypos[i] == record->event.key) {
+		if(mm_keypos_equal(a_This->keypos[i], record->event.key)) {
 			
 			key_part_of_chord = true;
 			
 			if(record->event.pressed) {
-				if(!member_active[i]) {
-					member_active[i] = true;
-					++n_chord_keys_pressed;
+				if(!a_This->member_active[i]) {
+					a_This->member_active[i] = true;
+					++a_This->n_chord_keys_pressed;
 				}
 			}
 			else {
-				if(member_active[i]) {
-					member_active[i] = false;
-					--n_chord_keys_pressed;
+				if(a_This->member_active[i]) {
+					a_This->member_active[i] = false;
+					--a_This->n_chord_keys_pressed;
 				}
 			}
 			break;
@@ -466,30 +546,28 @@ static uint8_t mm_chord_subphrase_consider_keychange(
 	
 	if(!key_part_of_chord) {
 		if(record->event.pressed) {
-			a_This->phrase_inventory->state = MM_Phrase_Invalid;
-			return a_This->phrase_inventory->state;
+			a_This->phrase_inventory.state = MM_Phrase_Invalid;
+			return a_This->phrase_inventory.state;
 		}
 	}
 	
-	if(n_chord_keys_pressed == n_members) {
+	if(a_This->n_chord_keys_pressed == a_This->n_members) {
 		
 		/* Chord completed
 		 */
-		a_This->phrase_inventory->state = MM_Phrase_Completed;
+		a_This->phrase_inventory.state = MM_Phrase_Completed;
 	}
 	
-	return a_This->phrase_inventory->state;
+	return a_This->phrase_inventory.state;
 }
 
 static void mm_chord_reset(MM_Chord *a_This) 
 {
-	uint8_t i;
-	
-	mm_phrase_reset(a_This);
+	mm_phrase_reset((MM_Phrase*)a_This);
 	
 	a_This->n_chord_keys_pressed = 0;
 	
-	for(i = 0; i < a_This->n_members; ++i) {
+	for(uint8_t i = 0; i < a_This->n_members; ++i) {
 		a_This->member_active[i] = false;
 	}
 }
@@ -516,7 +594,7 @@ static void mm_chord_resize(MM_Chord *a_This,
 	a_This->member_active = (bool *)malloc(n_members*sizeof(bool));
 	a_This->n_chord_keys_pressed = 0;
 	
-	for(i = 0; i < n_members; ++i) {
+	for(uint8_t i = 0; i < n_members; ++i) {
 		a_This->member_active[i] = false;
 	}
 }
@@ -528,9 +606,36 @@ static MM_Chord* mm_chord_destroy(MM_Chord *a_This) {
 	return a_This;
 }
 
-static MM_Chord *mm_chord_alloc(){
+static MM_Chord *mm_chord_alloc(void){
     return (MM_Chord*)malloc(sizeof(MM_Chord));
 }
+
+static bool mm_chord_equals(MM_Chord *c1, MM_Chord *c2) 
+{
+	if(c1->n_members != c2->n_members) { return false; }
+	
+	for(uint8_t i = 0; i < c1->n_members; ++i) {
+		if(!mm_keypos_equal(c1->keypos[i], c2->keypos[i])) { return false; }
+	}
+	
+	return true;
+}
+
+static MM_Phrase_Vtable mm_chord_vtable =
+{
+	.consider_keychange 
+		= (MM_Phrase_Consider_Keychange_Fun) mm_phrase_consider_keychange,
+	.successor_consider_keychange 
+		= (MM_Phrase_Successor_Consider_Keychange_Fun) mm_chord_successor_consider_keychange,
+	.reset 
+		= (MM_Phrase_Reset_Fun) mm_chord_reset,
+	.trigger_action 
+		= (MM_Phrase_Trigger_Action_Fun) mm_phrase_trigger_action,
+	.destroy 
+		= (MM_Phrase_Destroy_Fun) mm_chord_destroy,
+	.equals
+		= (MM_Phrase_Equals_Fun) mm_chord_equals
+};
 
 static MM_Chord *mm_chord_new(MM_Chord *a_chord){
     
@@ -538,14 +643,7 @@ static MM_Chord *mm_chord_new(MM_Chord *a_chord){
 	 */
 	mm_phrase_new((MM_Phrase*)a_chord);
 
-	a_chord->vtable.successor_consider_keychange 
-		= (MM_Phrase_Subphrase_Consider_Keychange_Fun) mm_chord_subphrase_consider_keychange;
-	a_chord->vtable.reset 
-		= (MM_Phrase_Reset_Fun) mm_chord_reset;
-	a_chord->vtable.trigger_action 
-		= (MM_Phrase_Trigger_Action_Fun) mm_chord_trigger_action;
-	a_chord->vtable.destroy 
-		= (MM_Phrase_Destroy_Fun) mm_chord_destroy;
+	a_chord->phrase_inventory.vtable = &mm_chord_vtable;
 		
 	/* Initialize the chord
 	 */
@@ -555,29 +653,6 @@ static MM_Chord *mm_chord_new(MM_Chord *a_chord){
 	a_chord->n_chord_keys_pressed = 0;
 
 	return a_chord;
-}
-
-static MM_Chord *mm_init_and_register_chord(
-									MM_Phrase *end_of_melody, 
-									keypos_t *keypos,
-									uint8_t n_members)
-{
-	int i;
-	
-    MM_Chord *a_chord = (MM_Chord*)mm_chord_new(mm_chord_alloc());
-	
-	 a_chord->phrase_inventory.parent = end_of_melody;
-	 
-	 mm_chord_resize(a_chord, n_members);
-	 
-	for(i = 0; i < n_members; ++i) {
-		a_chord->keypos[i] = keypos[i];
-	}
-	
-	 mm_phrase_add_successor(end_of_melody, a_chord);
-	 
-	 /* Return the new end of the melody */
-	 return a_chord;
 }
 
 /*****************************************************************************
@@ -595,34 +670,34 @@ typedef struct {
 	 
 } MM_Cluster;
 
-static uint8_t mm_cluster_subphrase_consider_keychange(	
+static uint8_t mm_cluster_successor_consider_keychange(	
 											MM_Cluster *a_This,
 											uint16_t keycode, 
 											keyrecord_t *record) 
 {
 	bool key_part_of_cluster = false;
-	uint8_t i;
 	
 	assert(a_This->n_members != 0);
 	
-	/* Only react on pressed keys 
+	/* Only react on pressed keys. Allow cluster members to be released. 
+	 * Every key only must be pressed once.
 	 */
-	if(!record->event.pressed) return;
+	if(!record->event.pressed) { return MM_Phrase_In_Progress; }
 	
-	assert(a_This->phrase_inventory->state == MM_Phrase_In_Progress);
+	assert(a_This->phrase_inventory.state == MM_Phrase_In_Progress);
 	
 	/* Check it the key is part of the current chord 
 	 */
-	for(i = 0; i < a_This->n_members; ++i) {
+	for(uint8_t i = 0; i < a_This->n_members; ++i) {
 		
-		if(mm_keypos_equal(a_This->keypos[i] == record->event.key)) {
+		if(mm_keypos_equal(a_This->keypos[i], record->event.key)) {
 			
 			key_part_of_cluster = true;
 			
 			if(record->event.pressed) {
-				if(!member_active[i]) {
-					member_active[i] = true;
-					++n_cluster_keys_pressed;
+				if(!a_This->member_active[i]) {
+					a_This->member_active[i] = true;
+					++a_This->n_cluster_keys_pressed;
 				}
 			}
 			/* Note: We do not care for released keys here. Every cluster member must be pressed only once
@@ -634,30 +709,28 @@ static uint8_t mm_cluster_subphrase_consider_keychange(
 	
 	if(!key_part_of_cluster) {
 		if(record->event.pressed) {
-			a_This->phrase_inventory->state = MM_Phrase_Invalid;
-			return a_This->phrase_inventory->state;
+			a_This->phrase_inventory.state = MM_Phrase_Invalid;
+			return a_This->phrase_inventory.state;
 		}
 	}
 	
-	if(n_cluster_keys_pressed == n_members) {
+	if(a_This->n_cluster_keys_pressed == a_This->n_members) {
 		
 		/* Cluster completed
 		 */
-		a_This->phrase_inventory->state = MM_Phrase_Completed;
+		a_This->phrase_inventory.state = MM_Phrase_Completed;
 	}
 	
-	return a_This->phrase_inventory->state;
+	return a_This->phrase_inventory.state;
 }
 
-static void mm_custer_reset(MM_Cluster *a_This) 
+static void mm_cluster_reset(MM_Cluster *a_This) 
 {
-	uint8_t i;
-	
-	mm_phrase_reset(a_This);
+	mm_phrase_reset((MM_Phrase*)a_This);
 	
 	a_This->n_cluster_keys_pressed = 0;
 	
-	for(i = 0; i < a_This->n_members; ++i) {
+	for(uint8_t i = 0; i < a_This->n_members; ++i) {
 		a_This->member_active[i] = false;
 	}
 }
@@ -682,11 +755,33 @@ static void mm_cluster_resize(MM_Cluster *a_This,
 	a_This->n_members = n_members;
 	a_This->keypos = (keypos_t *)malloc(n_members*sizeof(keypos_t));
 	a_This->member_active = (bool *)malloc(n_members*sizeof(bool));
-	a_This->n_chord_keys_pressed = 0;
+	a_This->n_cluster_keys_pressed = 0;
 	
-	for(i = 0; i < n_members; ++i) {
+	for(uint8_t i = 0; i < n_members; ++i) {
 		a_This->member_active[i] = false;
 	}
+}
+
+static bool mm_is_cluster_member(MM_Cluster *c, keypos_t key)
+{
+	for(uint8_t i = 0; i < c->n_members; ++i) {
+		if(mm_keypos_equal(c->keypos[i], key)) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+static bool mm_cluster_equals(MM_Cluster *c1, MM_Cluster *c2) 
+{
+	if(c1->n_members != c2->n_members) { return false; }
+	
+	for(uint8_t i = 0; i < c1->n_members; ++i) {
+		if(!mm_is_cluster_member(c1, c2->keypos[i])) { return false; }
+	}
+	
+	return true;
 }
 
 static MM_Cluster* mm_cluster_destroy(MM_Cluster *a_This) {
@@ -696,9 +791,25 @@ static MM_Cluster* mm_cluster_destroy(MM_Cluster *a_This) {
     return a_This;
 }
 
-static MM_Cluster *mm_cluster_alloc(){
+static MM_Cluster *mm_cluster_alloc(void){
     return (MM_Cluster*)malloc(sizeof(MM_Cluster));
-}
+} 
+
+static MM_Phrase_Vtable mm_cluster_vtable =
+{
+	.consider_keychange 
+		= (MM_Phrase_Consider_Keychange_Fun) mm_phrase_consider_keychange,
+	.successor_consider_keychange 
+		= (MM_Phrase_Successor_Consider_Keychange_Fun) mm_cluster_successor_consider_keychange,
+	.reset 
+		= (MM_Phrase_Reset_Fun) mm_cluster_reset,
+	.trigger_action 
+		= (MM_Phrase_Trigger_Action_Fun) mm_phrase_trigger_action,
+	.destroy 
+		= (MM_Phrase_Destroy_Fun) mm_cluster_destroy,
+	.equals
+		= (MM_Phrase_Equals_Fun) mm_cluster_equals
+};
 
 static MM_Cluster *mm_cluster_new(MM_Cluster *a_cluster) {
 	
@@ -706,14 +817,7 @@ static MM_Cluster *mm_cluster_new(MM_Cluster *a_cluster) {
 	*/
 	mm_phrase_new((MM_Phrase*)a_cluster);
 
-	a_cluster->vtable.successor_consider_keychange 
-		= (MM_Phrase_Subphrase_Consider_Keychange_Fun) mm_cluster_subphrase_consider_keychange;
-	a_cluster->vtable.reset 
-		= (MM_Phrase_Reset_Fun) mm_custer_reset;
-	a_cluster->vtable.trigger_action 
-		= (MM_Phrase_Trigger_Action_Fun) mm_cluster_trigger_action;
-	a_cluster->vtable.destroy 
-		= (MM_Phrase_Destroy_Fun) mm_cluster_destroy;
+	a_cluster->phrase_inventory.vtable = &mm_cluster_vtable;
 	
 	a_cluster->n_members = 0;
 	a_cluster->keypos = NULL;
@@ -723,33 +827,11 @@ static MM_Cluster *mm_cluster_new(MM_Cluster *a_cluster) {
 	return a_cluster;
 }
 
-static MM_Chord *mm_init_and_register_cluster(
-									MM_Phrase *end_of_melody, 
-									keypos_t *keypos,
-									uint8_t n_members)
-{
-	int i;
-	
-    MM_Cluster *a_cluster = (MM_Cluster*)mm_cluster_new(mm_cluster_alloc());
-	
-	 a_cluster->phrase_inventory.parent = end_of_melody;
-	 
-	 mm_cluster_resize(a_cluster, n_members);
-	 	
-	 for(i = 0; i < n_members; ++i) {
-		a_cluster->keypos[i] = keypos[i];
-	}
-	 mm_phrase_add_successor(end_of_melody, a_cluster);
-	 
-	 /* Return the new end of the melody */
-	 return a_cluster;
-}
-
 /*****************************************************************************
  * Public access functions for creation and destruction of the melody tree
  *****************************************************************************/
 
-void *mm_init_melody() {
+static void mm_init(void) {
 
 	if(!mm_state.melody_root_initialized) {
 		
@@ -759,120 +841,98 @@ void *mm_init_melody() {
 		
 		mm_state.melody_root_initialized = true;
 	}
-	
-	return &mm_state.melody_root;
 }
 
-void mm_finalize() {
-	mm_phrase_free_successors(mm_get_melody_root());
+void mm_finalize_magic_melodies(void) {
+	mm_phrase_free_successors(&mm_state.melody_root);
 }
 
-void *mm_add_note(	
-									void *end_of_melody__, 
-									keypos_t keypos, 
-									uint8_t n_successors)
+void *mm_create_note(keypos_t keypos, 
+							uint16_t action_keycode)
 {
-    MM_Note *a_note = (MM_Note*)mm_init_and_register_note(end_of_melody, keypos);
+    MM_Note *a_note = (MM_Note*)mm_note_new(mm_note_alloc());
 	 
-	 MM_Phrase *end_of_melody = (MM_Phrase *)end_of_melody__;
-	
-	 mm_phrase_allocate_successors(a_note, n_successors);
-	 
-	 /* Return the new end of the melody */
-	 return a_note;
-}
-
-void *mm_add_terminal_note(
-									void *end_of_melody__, 
-									keypos_t keypos,
-									uint16_t action_keycode)
-{
-    MM_Note *a_note = (MM_Note*)mm_init_and_register_note(end_of_melody, keypos);
-	
-	 MM_Phrase *end_of_melody = (MM_Phrase *)end_of_melody__;
-	 
+	 a_note->keypos = keypos;
 	 a_note->phrase_inventory.action_keycode = action_keycode;
 	 
 	 /* Return the new end of the melody */
 	 return a_note;
 }
 
-void *mm_add_chord(
-									void *end_of_melody__, 
+void *mm_create_chord(	keypos_t *keypos,
+								uint8_t n_members, 
+								uint16_t action_keycode)
+{
+	MM_Chord *a_chord = (MM_Chord*)mm_chord_new(mm_chord_alloc());
+	 	 
+	mm_chord_resize(a_chord, n_members);
+	 
+	for(uint8_t i = 0; i < n_members; ++i) {
+		a_chord->keypos[i] = keypos[i];
+	}
+	 
+	a_chord->phrase_inventory.action_keycode = action_keycode;
+	 
+	/* Return the new end of the melody */
+	return a_chord;
+}
+
+void *mm_create_cluster(
 									keypos_t *keypos,
-									uint8_t n_members,
-									uint8_t n_successors)
+									uint8_t n_members, 
+									uint16_t action_keycode)
 {
-    MM_Chord *a_chord = (MM_Chord*)mm_chord_nmm_chord_new(end_of_melody, keypos, n_members);
+	MM_Cluster *a_cluster = (MM_Cluster*)mm_cluster_new(mm_cluster_alloc());
 	 
-	 MM_Phrase *end_of_melody = (MM_Phrase *)end_of_melody__;
+	mm_cluster_resize(a_cluster, n_members);
+	 	
+	for(uint8_t i = 0; i < n_members; ++i) {
+		a_cluster->keypos[i] = keypos[i];
+	}
 	 
-	 mm_phrase_allocate_successors(a_chord, n_successors);
-	 
-	 /* Return the new end of the melody */
-	 return a_chord;
-}
-
-void *mm_add_terminal_chord(void *end_of_melody__, 
-								  keypos_t *keypos,
-									uint8_t n_members,
-								  uint16_t action_keycode)
-{
-    MM_Chord *a_chord = (MM_Chord*)mm_chord_nmm_chord_new(end_of_melody, keypos, n_members);
+	a_cluster->phrase_inventory.action_keycode = action_keycode;
 	
-	 MM_Phrase *end_of_melody = (MM_Phrase *)end_of_melody__;
-	 
-	 a_chord->phrase_inventory.action_keycode = action_keycode;
-	 
-	 /* Return the new end of the melody */
-	 return a_note;
+	/* Return the new end of the melody */
+	return a_cluster;
 }
 
-void *mm_add_cluster(
-									void *end_of_melody__, 
-									keypos_t *keypos,
-									uint8_t n_members,
-									uint8_t n_successors)
-{
-    MM_Cluster *a_cluster = (MM_Cluster*)mm_init_and_register_cluster(end_of_melody, keypos, n_members);
-
-	 MM_Phrase *end_of_melody = (MM_Phrase *)end_of_melody__;
-	 
-	 mm_phrase_allocate_successors(a_cluster, n_successors);
-	 
-	 /* Return the new end of the melody */
-	 return a_cluster;
-}
-
-void *mm_add_terminal_cluster(void *end_of_melody__, 
-									keypos_t *keypos,
-									uint8_t n_members,
-								  uint16_t action_keycode)
-{
-    MM_Cluster *a_cluster = (MM_Cluster*)mm_init_and_register_cluster(end_of_melody, keypos, n_members);
-
-	 MM_Phrase *end_of_melody = (MM_Phrase *)end_of_melody__;
-	 
-	 a_cluster->phrase_inventory.action_keycode = action_keycode;
-	 
-	 /* Return the new end of the melody */
-	 return a_note;
-}
-
-static void mm_reset_magic_melodies()
-{		
-	if(!mm_state.current_phrase) { return; }
+void mm_add_melody(int count, ...)
+{ 
+	mm_init();
 	
-	/* The frase could not be parsed. Reset any previous phrases.
-	*/
-	mm_phrase_reset_recursively(mm_state.current_phrase);
+	va_list ap;
+
+	va_start (ap, count);         /* Initialize the argument list. */
+  
+	MM_Phrase *parent_phrase = &mm_state.melody_root;
 	
-	/* Cleanup and issue all keypresses as if they happened without parsing a melody
-	*/
-	mm_cleanup();
+	for (int i = 0; i < count; i++) { 
+		
+		MM_Phrase *curPhrase = va_arg (ap, MM_Phrase *);    /* Get the next argument value. */
+		
+		MM_Phrase *equivalent_successor 
+			= mm_phrase_get_equivalent_successor(parent_phrase, curPhrase);
+		
+		if(equivalent_successor) {
+			
+			parent_phrase = equivalent_successor;
+			
+			/* The successor is already registered in the search tree. Delete the newly created version.
+			 */			
+			mm_phrase_free(curPhrase);
+		}
+		else {
+			
+			mm_phrase_add_successor(parent_phrase, curPhrase);
+			
+			parent_phrase = curPhrase;
+		}
+	}
+
+  va_end (ap);                  /* Clean up. */
 }
 
-bool process_magic_melodies(uint16_t keycode, keyrecord_t *record)
+bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record)
 {
 	/* When a melody could not be finished, all keystrokes are
 	 * processed through the process_record_quantum method.
@@ -881,9 +941,11 @@ bool process_magic_melodies(uint16_t keycode, keyrecord_t *record)
 	 */
 	if(mm_state.magic_melodies_temporarily_disabled) { return true; }
 	
+	/* Early exit if no melody was registered 
+	 */
 	if(!mm_state.melody_root_initialized) { return true; }
 	
-	/* Check if the melody is aborted
+	/* Check if the melody is being aborted
 	 */
 	if(	(mm_state.abort_keypos.row == record->event.key.row)
 		&&	(mm_state.abort_keypos.col == record->event.key.col)) {
@@ -900,6 +962,22 @@ bool process_magic_melodies(uint16_t keycode, keyrecord_t *record)
 	
 	if(!mm_state.current_phrase) {
 		mm_state.current_phrase = &mm_state.melody_root;
+		mm_state.time_last_keypress = timer_read();
+	}
+	else {
+		
+		/* Check if the keypress happened in time
+		 */
+		if(timer_elapsed(mm_state.time_last_keypress) > mm_state.keypress_timeout) {
+			
+			/* Too late...
+			 */
+			mm_abort_magic_melody();
+			return false;
+		}
+		else {
+			mm_state.time_last_keypress = timer_read();
+		}
 	}
 	
 	uint8_t result 
@@ -923,6 +1001,11 @@ bool process_magic_melodies(uint16_t keycode, keyrecord_t *record)
 void mm_set_abort_keypos(keypos_t keypos)
 {
 	mm_state.abort_keypos = keypos;
+}
+
+void mm_set_timeout_ms(uint16_t timeout)
+{
+	mm_state.keypress_timeout = timeout;
 }
 
 #endif /*ifdef MAGIC_MELODIES_ENABLE*/

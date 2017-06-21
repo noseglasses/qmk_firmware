@@ -98,6 +98,12 @@ ifeq ($(strip $(TAP_DANCE_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/process_keycode/process_tap_dance.c
 endif
 
+ifeq ($(strip $(MAGIC_MELODIES_ENABLE)), yes)
+    OPT_DEFS += -DMAGIC_MELODIES_ENABLE
+    SRC += $(QUANTUM_DIR)/process_keycode/process_magic_melodies.c
+endif
+
+
 ifeq ($(strip $(PRINTING_ENABLE)), yes)
     OPT_DEFS += -DPRINTING_ENABLE
     SRC += $(QUANTUM_DIR)/process_keycode/process_printer.c

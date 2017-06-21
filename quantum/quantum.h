@@ -93,10 +93,6 @@ extern uint32_t default_layer_state;
 #ifdef COMBO_ENABLE
 	#include "process_combo.h"
 #endif
-	
-#ifdef MAGIC_MELODIES_ENABLE
-	#include "process_magic_melodies.h"
-#endif
 
 #define SEND_STRING(str) send_string(PSTR(str))
 void send_string(const char *str);

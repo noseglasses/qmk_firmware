@@ -18,51 +18,40 @@
 
 #ifdef MAGIC_MELODIES_ENABLE
 
-void *mm_init_melody();
+#include "quantum.h"
+#include "tmk_core/common/keyboard.h"
 
-void *mm_add_note(	
-									void *end_of_melody, 
-									keypos_t keypos, 
-									uint8_t n_successors);
+void *mm_create_note(keypos_t keypos, 
+							uint16_t action_keycode);
 
-void *mm_add_terminal_note(
-									void *end_of_melody, 
-									keypos_t keypos,
+void *mm_create_chord(	keypos_t *keypos,
+								uint8_t n_members, 
+								uint16_t action_keycode);
+
+void *mm_create_cluster(
+									keypos_t *keypos,
+									uint8_t n_members, 
 									uint16_t action_keycode);
 
-void *mm_add_chord(
-									void *end_of_melody, 
-									keypos_t *keypos,
-									uint8_t n_members,
-									uint8_t n_successors);
-
-void *mm_add_terminal_chord(void *end_of_melody, 
-								  keypos_t *keypos,
-									uint8_t n_members,
-								  uint16_t action_keycode);
-
-void *mm_add_cluster(
-									void *end_of_melody, 
-									keypos_t *keypos,
-									uint8_t n_members,
-									uint8_t n_successors);
-
-void *mm_add_terminal_cluster(void *end_of_melody,  
-									keypos_t *keypos,
-									uint8_t n_members,
-								  uint16_t action_keycode);
+void mm_add_melody(int count, ...);
 
 void mm_set_abort_keypos(keypos_t keypos);
 
-/* Do not call functions defined below this line when defining keymaps. 
+void mm_set_timeout_ms(uint16_t timeout);
+
+#define MM_NO_ACTION 0
+
+#define MM_KEYPOS(ROW, COL) (keypos_t){.row = ROW, .col = COL}
+
+/* Do not call functions defined below this line when defining keymaps.
  * Those methods are reserved for quantums internal use.
  */
 
-/* Is finalization required? 
+/* Is finalization required?
  */
-void finalize_magic_melody();
+void mm_finalize_magic_melodies(void);
 
-bool process_magic_melodies(uint16_t keycode, keyrecord_t *record)
+bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record);
 
 #endif /*ifdef MAGIC_MELODIES_ENABLE*/
 

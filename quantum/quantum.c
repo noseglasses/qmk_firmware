@@ -178,9 +178,6 @@ bool process_record_quantum(keyrecord_t *record) {
   #if defined(AUDIO_ENABLE) || (defined(MIDI_ENABLE) && defined(MIDI_BASIC))
     process_music(keycode, record) &&
   #endif
-  #ifdef MAGIC_MELODIES_ENABLE
-    process_magic_melodies(keycode, record) &&
-  #endif
   #ifdef TAP_DANCE_ENABLE
     process_tap_dance(keycode, record) &&
   #endif
