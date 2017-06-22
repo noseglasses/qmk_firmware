@@ -21,42 +21,84 @@
 #include "quantum.h"
 #include "tmk_core/common/keyboard.h"
 
+/* Note: All definition functions return a pointer to the melody that can be 
+ *       passed e.g. to mm_set_user_function or mm_set_action_keycode
+ */
+
+/* Define single note lines.
+ */
+void *mm_single_note_line(
+							uint8_t layer, 
+							uint16_t action_keycode, 
+							int count, ...);
+
+/* Define a chord (all members must be activated/pressed simultaneously).
+ */
+void *mm_chord(			uint8_t layer, 
+							keypos_t *keypos,
+							uint8_t n_members, 
+							uint16_t action_keycode);
+
+/* Define a cluste (all members must be activated/pressed at least once for
+ * the cluster to be considered as completed).
+ */
+void *mm_cluster(		uint8_t layer, 
+							keypos_t *keypos,
+							uint8_t n_members, 
+							uint16_t action_keycode);
+
+/* Define tap dances (great thanks to algernon for the inspiration)
+ */
+void *mm_tap_dance(
+							uint8_t layer, 
+							uint16_t action_keycode, 
+							int n_taps, 
+							keypos_t curKeypos);
+
+/* Use the following functions to create complex melodies as sequences of
+ * notes, chords and clusters.
+ */
 void *mm_create_note(keypos_t keypos, 
 							uint16_t action_keycode);
 
-void *mm_create_chord(	keypos_t *keypos,
-								uint8_t n_members, 
-								uint16_t action_keycode);
+void *mm_create_chord(	
+							keypos_t *keypos,
+							uint8_t n_members, 
+							uint16_t action_keycode);
 
 void *mm_create_cluster(
-									keypos_t *keypos,
-									uint8_t n_members, 
+							keypos_t *keypos,
+							uint8_t n_members, 
+							uint16_t action_keycode);
+
+void *mm_melody(		uint8_t layer, 
+							int count, ...);
+
+typedef void (*MM_User_Callback_Fun)(void *);
+
+/* Use this to add a user callback instead of a keycode
+ */
+void mm_set_user_function(void *melody,
+								  MM_User_Callback_Fun func,
+								  void *user_data);
+
+/* Use this to set an action keycode
+ */
+void mm_set_action_keycode(
+									void *melody,
 									uint16_t action_keycode);
 
-void mm_add_melody(int count, ...);
-
-/* This method simplifies defining node lines or tap dances
+/* Configuration functions
  */
-void mm_add_note_line(uint16_t action_keycode, 
-							 int count, ...);
-
-void mm_add_tap_dance(uint16_t action_keycode, 
-							 int n_taps, 
-							 keypos_t curKeypos);
-
 void mm_set_abort_keypos(keypos_t keypos);
 
 void mm_set_timeout_ms(uint16_t timeout);
-
-#define MM_NO_ACTION 0
-
-#define MM_KEYPOS(ROW, COL) (keypos_t){.row = ROW, .col = COL}
 
 /* Is finalization required?
  */
 void mm_finalize_magic_melodies(void);
 
-/* Call this function from process_record_user
+/* Call this function from process_record_user to enable processing magic melodies
  */
 bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record);
 
@@ -64,6 +106,13 @@ bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record);
  * It returns true on timeout.
  */
 bool mm_check_timeout(void);
+
+#define MM_NO_ACTION KC_NO
+
+#define MM_KEYPOS_HEX(COL, ROW) (keypos_t){.row = 0x##ROW, .col = 0x##COL}
+
+#define MM_NUM_KEYS(S) \
+	(sizeof(S)/sizeof(keypos_t))
 
 #endif /*ifdef MAGIC_MELODIES_ENABLE*/
 
