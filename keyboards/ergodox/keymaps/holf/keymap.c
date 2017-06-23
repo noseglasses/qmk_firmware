@@ -393,20 +393,24 @@ void init_magic_melodies(void)
 	 */
 	mm_melody(
 		ff_layer_base,
-		MM_ACTION_KEYCODE(F(ff_a_melody_1)),
 		2,
 		mm_create_note(Key_52),
-		mm_create_note(Key_5B)
+		mm_set_action(
+			mm_create_note(Key_5B),
+			MM_ACTION_KEYCODE(F(ff_a_melody_1))
+		)
 	);
 	
 	/* Left inner large thumb key then right inner large thumb key
 	 */
 	mm_melody(
 		ff_layer_base,
-		MM_ACTION_KEYCODE(F(ff_a_melody_2)),
 		2,
 		mm_create_note(Key_52),
-		mm_create_note(Key_5A)
+		mm_set_action(
+			mm_create_note(Key_5A),
+			MM_ACTION_KEYCODE(F(ff_a_melody_2))
+		)
 	);
 	
 	keypos_t chord_keys[] 
@@ -426,15 +430,17 @@ void init_magic_melodies(void)
 	 */
 	mm_melody(
 		ff_layer_base,
-		MM_ACTION_KEYCODE(F(ff_a_chord_and_cluster)),
 		2,
 		mm_create_chord(
 			chord_keys,
 			MM_NUM_KEYS(chord_keys)
 		),
-		mm_create_cluster(
-			cluster_keys,
-			MM_NUM_KEYS(cluster_keys)
+		mm_set_action(
+			mm_create_cluster(
+				cluster_keys,
+				MM_NUM_KEYS(cluster_keys)
+			),
+			MM_ACTION_KEYCODE(F(ff_a_chord_and_cluster))
 		)
 	);
 	
@@ -465,9 +471,14 @@ void init_magic_melodies(void)
 	 */
 	mm_tap_dance(
 		ff_layer_base,
-		MM_ACTION_KEYCODE(F(ff_a_tap_dance)),
+		SINGLE_NOTE_LINE_KEY_1, /* the tap dance key */
+		MM_Action_None, /* Use MM_Action_Transparent if you want fall through, 
+								e.g. if something happens after three and five keypresses
+								and you want to fall through to the three keypress action
+								if only four keypresses happen before timeout */
+		MM_N_TAPS(1) /* one tap definition */,
 		3,
-		SINGLE_NOTE_LINE_KEY_1
+		MM_ACTION_KEYCODE(F(ff_a_tap_dance))
 	);
 	
 	/* Single chord of left thumb inner large key, right thumb both large keys

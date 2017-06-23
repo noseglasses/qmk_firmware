@@ -254,7 +254,7 @@ static void mm_phrase_store_action(MM_Phrase *a_phrase,
 	}
 }
 
-static void mm_flush_stored_keychanges(void)
+static void mm_flush_stored_keyevents(void)
 {
 	if(mm_state.n_keys_changed == 0) { return; }
 	
@@ -317,7 +317,109 @@ static void mm_abort_magic_melody(void)
 	
 	/* Cleanup and issue all keypresses as if they happened without parsing a melody
 	*/
-	mm_flush_stored_keychanges();
+	mm_flush_stored_keyevents();
+	
+	mm_state.n_keys_changed = 0;
+	mm_state.current_phrase = NULL;
+}
+
+static void mm_phrase_trigger_action(MM_Phrase *a_MM_Phrase) {
+	
+	MM_PRINTF("*\n");
+	
+	switch(a_MM_Phrase->action.type) {
+		case MM_Action_Keycode:
+	
+			if(a_MM_Phrase->action.data.keycode != 0) {
+				
+				/* Construct a dummy record
+				*/
+				keyrecord_t record;
+					record.event.key.row = 0;
+					record.event.key.col = 0;
+					record.event.pressed = true;
+					record.event.time = timer_read();
+					
+				/* Use the quantum/tmk system to trigger the action
+				 * thereby using a fictituous a key (0, 0) with which the action 
+				 * keycode is associated. We pretend that the respective key
+				 * was hit and released to make sure that any action that
+				 * requires both events is correctly processed.
+				 * Unfortunatelly this means that some actions that
+				 * require keys to be held do not make sense, e.g.
+				 * modifier keys or MO(...), etc.
+				 */
+				
+				uint16_t configured_keycode = keycode_config(a_MM_Phrase->action.data.keycode);
+				
+				action_t action = action_for_configured_keycode(configured_keycode); 
+			
+				process_action(&record, action);
+				
+				record.event.pressed = false;
+				record.event.time = timer_read();
+				
+				process_action(&record, action);
+			}
+			break;
+		case MM_Action_User_Callback:
+			
+			if(a_MM_Phrase->action.data.user_callback.func) {
+				a_MM_Phrase->action.data.user_callback.func(
+					a_MM_Phrase->action.data.user_callback.user_data);
+			}
+			break;
+	}
+}
+
+static bool mm_trigger_action_of_most_recent_phrase(void)
+{			
+	if(!mm_state.current_phrase) { return false; }
+	
+	MM_PRINTF("Triggering action of most recent phrase\n");
+	
+	MM_Phrase *cur_phrase = mm_state.current_phrase;
+	
+	while(cur_phrase) {
+		
+		switch(cur_phrase->action.type) {
+			case MM_Action_Undefined:
+			case MM_Action_None:
+				return false;
+				break;
+			case MM_Action_Transparent:
+				cur_phrase = cur_phrase->parent;
+				break;
+			default:
+				mm_phrase_trigger_action(cur_phrase);
+				return true;
+		}
+	}
+	
+	return false;
+}
+
+static void mm_on_timeout(void)
+{
+	if(!mm_state.current_phrase) { return; }
+	
+	/* The frase could not be parsed. Reset any previous phrases.
+	*/
+	mm_phrase_reset_successors(mm_state.current_phrase);
+	
+	/* It timeout was hit, we either trigger the most recent action
+	 * (e.g. necessary for tap dances) or flush the keyevents
+	 * that happend until this point
+	 */
+	
+	bool action_triggered 
+		= mm_trigger_action_of_most_recent_phrase();
+	
+	/* Cleanup and issue all keypresses as if they happened without parsing a melody
+	*/
+	if(action_triggered) {
+		mm_flush_stored_keyevents();
+	}
 	
 	mm_state.n_keys_changed = 0;
 	mm_state.current_phrase = NULL;
@@ -468,55 +570,6 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 	return MM_Phrase_In_Progress;
 }
 
-static void mm_phrase_trigger_action(MM_Phrase *a_MM_Phrase) {
-	
-	MM_PRINTF("*\n");
-	
-	switch(a_MM_Phrase->action.type) {
-		case MM_Action_Keycode:
-	
-			if(a_MM_Phrase->action.data.keycode != 0) {
-				
-				/* Construct a dummy record
-				*/
-				keyrecord_t record;
-					record.event.key.row = 0;
-					record.event.key.col = 0;
-					record.event.pressed = true;
-					record.event.time = timer_read();
-					
-				/* Use the quantum/tmk system to trigger the action
-				 * thereby using a fictituous a key (0, 0) with which the action 
-				 * keycode is associated. We pretend that the respective key
-				 * was hit and released to make sure that any action that
-				 * requires both events is correctly processed.
-				 * Unfortunatelly this means that some actions that
-				 * require keys to be held do not make sense, e.g.
-				 * modifier keys or MO(...), etc.
-				 */
-				
-				uint16_t configured_keycode = keycode_config(a_MM_Phrase->action.data.keycode);
-				
-				action_t action = action_for_configured_keycode(configured_keycode); 
-			
-				process_action(&record, action);
-				
-				record.event.pressed = false;
-				record.event.time = timer_read();
-				
-				process_action(&record, action);
-			}
-			break;
-		case MM_Action_User_Callback:
-			
-			if(a_MM_Phrase->action.data.user_callback.func) {
-				a_MM_Phrase->action.data.user_callback.func(
-					a_MM_Phrase->action.data.user_callback.user_data);
-			}
-			break;
-	}
-}
-
 static void mm_phrase_allocate_successors(MM_Phrase *a_This, uint8_t n_successors) {
 
 	 a_This->successors 
@@ -654,7 +707,7 @@ static MM_Phrase *mm_phrase_new(MM_Phrase *a_MM_Phrase) {
 	 a_MM_Phrase->n_allocated_successors = 0;
     a_MM_Phrase->n_successors = 0;
     a_MM_Phrase->action.data.keycode = 0;
-    a_MM_Phrase->action.type = MM_Action_Keycode;
+    a_MM_Phrase->action.type = MM_Action_Undefined;
     a_MM_Phrase->action.data.user_callback.func = NULL;
     a_MM_Phrase->action.data.user_callback.user_data = NULL;
     a_MM_Phrase->state = MM_Phrase_In_Progress;
@@ -1208,24 +1261,27 @@ static void mm_recursively_print_melody(MM_Phrase *p)
 #endif
 
 static void *mm_melody_from_list(	uint8_t layer,
-												MM_Action action,
 												MM_Phrase **phrases,
 												int n_phrases)
 { 
 	MM_Phrase *parent_phrase = &mm_state.melody_root;
 	
-	/* Store action.
-	 */
-	mm_phrase_store_action(phrases[n_phrases - 1], action);
-	
 	MM_PRINTF("   %d members\n", n_phrases);
 	
 	for (int i = 0; i < n_phrases; i++) { 
 		
-		MM_Phrase *curPhrase = phrases[i];
+		MM_Phrase *cur_phrase = phrases[i];
+		
+		/* If the action type is undefined, we set action 
+		 * type none, which means that no fall through happens
+		 * in case of timeout.
+		 */
+		if(cur_phrase->action.type == MM_Action_Undefined) {
+			cur_phrase->action.type = MM_Action_None;
+		}
 		
 		MM_Phrase *equivalent_successor 
-			= mm_phrase_get_equivalent_successor(parent_phrase, curPhrase);
+			= mm_phrase_get_equivalent_successor(parent_phrase, cur_phrase);
 			
 		MM_PRINTF("   member %d: ", i);
 		
@@ -1241,6 +1297,12 @@ static void *mm_melody_from_list(	uint8_t layer,
 			&& (i < (n_phrases - 1))
 		) {
 			
+			#if DEBUG_MAGIC_MELODIES
+			if(cur_phrase->action.type != equivalent_successor->action.type) {
+				MM_ERROR("Incompatible action types detected\n");
+			}
+			#endif
+			
 			MM_PRINTF("already present\n");
 			
 			parent_phrase = equivalent_successor;
@@ -1252,7 +1314,7 @@ static void *mm_melody_from_list(	uint8_t layer,
 			
 			/* The successor is already registered in the search tree. Delete the newly created version.
 			 */			
-			mm_phrase_free(curPhrase);
+			mm_phrase_free(cur_phrase);
 		}
 		else {
 			
@@ -1288,11 +1350,11 @@ static void *mm_melody_from_list(	uint8_t layer,
 			}
 			#endif /* if DEBUG_MAGIC_MELODIES */
 					
-			curPhrase->layer = layer;
+			cur_phrase->layer = layer;
 			
-			mm_phrase_add_successor(parent_phrase, curPhrase);
+			mm_phrase_add_successor(parent_phrase, cur_phrase);
 			
-			parent_phrase = curPhrase;
+			parent_phrase = cur_phrase;
 		}
 	}
 	
@@ -1302,8 +1364,8 @@ static void *mm_melody_from_list(	uint8_t layer,
 }
 
 void *mm_melody(		uint8_t layer, 
-							MM_Action action,
-							int count, ...)
+							int count, 
+							...)
 { 
 	MM_PRINTF("Adding magic melody\n");
 	
@@ -1322,7 +1384,7 @@ void *mm_melody(		uint8_t layer,
 	}
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(layer, action, phrases, count);
+		= mm_melody_from_list(layer, phrases, count);
 	
 	free(phrases);
 
@@ -1341,10 +1403,12 @@ void *mm_chord(		uint8_t layer,
 	MM_Phrase *cPhrase = 
 		(MM_Phrase *)mm_create_chord(keypos, n_members);
 		
+	cPhrase->action = action;
+		
 	MM_Phrase *phrases[1] = { cPhrase };
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(layer, action, phrases, 1);
+		= mm_melody_from_list(layer, phrases, 1);
 		
 	return leafPhrase;
 }
@@ -1359,10 +1423,12 @@ void *mm_cluster(		uint8_t layer,
 	MM_Phrase *cPhrase = 
 		(MM_Phrase *)mm_create_cluster(keypos, n_members);
 		
+	cPhrase->action = action;
+	
 	MM_Phrase *phrases[1] = { cPhrase };
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(layer, action, phrases, 1);
+		= mm_melody_from_list(layer, phrases, 1);
 		
 	return leafPhrase;
 }
@@ -1391,48 +1457,88 @@ void *mm_single_note_line(	uint8_t layer,
 		phrases[i] = (MM_Phrase *)new_note;
 	}
 	
-	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(layer, action, phrases, count);
+	mm_phrase_store_action(phrases[count - 1], action);
+	
+	MM_Phrase *leaf_phrase 
+		= mm_melody_from_list(layer, phrases, count);
 	
 	free(phrases);
 
 	va_end (ap);                  /* Clean up. */
   
-	return leafPhrase;
+	return leaf_phrase;
 }
 
 void *mm_tap_dance(	uint8_t layer,
-							MM_Action action, 
-							int n_taps, 
-							keypos_t curKeypos)
+							keypos_t curKeypos,
+							uint8_t default_action_type,
+							uint8_t n_vargs,
+							...
+							)
 {
 	MM_PRINTF("Adding tap dance\n");
 	
+	mm_init();
+	
+	va_list ap;
+
+	va_start (ap, n_vargs);         /* Initialize the argument list. */
+	
+	uint8_t n_tap_definitions = n_vargs/2;
+		
+	int n_taps = 0;
+	for (uint8_t i = 0; i < n_tap_definitions; i++) {
+		
+		int tap_count = va_arg (ap, int); 
+		va_arg (ap, MM_Action); /* not needed here */
+		
+		if(tap_count > n_taps) {
+			n_taps = tap_count;
+		}
+	}
+	
+	if(n_taps == 0) { return NULL; }
+	
 	MM_Phrase **phrases 
 		= (MM_Phrase **)malloc(n_taps*sizeof(MM_Phrase *));
-
-		
+	
 	for (int i = 0; i < n_taps; i++) {
-
+		
 		void *new_note = mm_create_note(curKeypos);
 		
 		phrases[i] = (MM_Phrase *)new_note;
+		
+		phrases[i]->action.type = default_action_type;
+	}
+	
+	va_start (ap, n_vargs);         /* Initialize the argument list. */
+	
+	for (uint8_t i = 0; i < n_tap_definitions; i++) {
+		
+		int tap_count = va_arg (ap, int); 
+		MM_Action action = va_arg (ap, MM_Action);
+
+		mm_phrase_store_action(phrases[tap_count - 1], action);
 	}
 			
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(layer, action, phrases, n_taps);
+		= mm_melody_from_list(layer, phrases, n_taps);
 	
 	free(phrases);
 	
 	return leafPhrase;
 }
 
-void mm_set_action(	void *phrase__,
+/* Returns phrase__
+ */
+void *mm_set_action(	void *phrase__,
 							MM_Action action)
 {
 	MM_Phrase *phrase = (MM_Phrase *)phrase__;
 	
 	mm_phrase_store_action(phrase, action);
+	
+	return phrase__;
 }
 
 bool mm_check_timeout(void)
@@ -1446,7 +1552,7 @@ bool mm_check_timeout(void)
 	
 		/* Too late...
 			*/
-		mm_abort_magic_melody();
+		mm_on_timeout();
 	
 		return true;
 	}

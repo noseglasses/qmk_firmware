@@ -26,7 +26,9 @@
  */
 
 enum {
-	MM_Action_None = 0,
+	MM_Action_Undefined = 0,
+	MM_Action_None,
+	MM_Action_Transparent,
 	MM_Action_Keycode,
 	MM_Action_User_Callback
 };
@@ -100,13 +102,16 @@ void *mm_cluster(		uint8_t layer,
 							keypos_t *keypos,
 							uint8_t n_members);
 
-/* Define tap dances (great thanks to algernon for the inspiration)
+/* Define tap dances (great thanks to algernon for the inspiration).
+ * The variadic arguments are pairs of keystroke counts and associated actions.
  */
-void *mm_tap_dance(
-							uint8_t layer, 
-							MM_Action action, 
-							int n_taps, 
-							keypos_t curKeypos);
+void *mm_tap_dance(	uint8_t layer,
+							keypos_t curKeypos,
+							uint8_t default_action_type,
+							uint8_t n_tap_definitions,
+							...);
+
+#define MM_N_TAPS(S) (2*S)
 
 /* Use the following functions to create complex melodies as sequences of
  * notes, chords and clusters.
@@ -121,14 +126,14 @@ void *mm_create_cluster(
 							keypos_t *keypos,
 							uint8_t n_members);
 
-void *mm_melody(		uint8_t layer, 
-							MM_Action action, 
+void *mm_melody(		uint8_t layer,  
 							int count, ...);
 
-/* Use this to modify actions after definition (is this necessary at all?)
+/* Use this to modify actions after definition. The function
+ * returns the phrase pointer.
  */
-void mm_set_action(
-									void *melody,
+void *mm_set_action(
+									void *phrase,
 									MM_Action action);
 
 /* Configuration functions */
