@@ -14,6 +14,73 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Some words about the code below:
+ * 
+ * Object oriented C is used to implement a polymorphic phrase class hierarchy.
+ * Phrases that were initially implemented are notes, chords and clusters.
+ * The phrase-family is extensible, so new types of phrases are easy to implement
+ * as polymorphic classes.
+ * 
+ * All this would have been easier and more concise in C++ but as qmk seems
+ * to be mostly written in C, we adhere to this choice of language, although it
+ * is hard to live without type safety and all those neat C++ features as templates...
+ * 
+ * The idea of magic melodies is inspired by magic musical instruments from
+ * phantasy fiction. Imagine a magic piano that does crazy things when certain
+ * melodies are played. Melodies can consist of single notes, chords and note clusters
+ * that must be played it a well defined order for the magic to happen.
+ * Clusters are sets of notes that can be played in arbitrary order. It is only necessary
+ * that every cluster member must have been played at least once for the cluster-phrase
+ * to be accepted.
+ * Going over to computer keyboards means that there is no music at all.
+ * However, the basic concepts are transferable. A key on the piano 
+ * here is a key on the keyboard. So a melody can be a combination of keystrokes.
+ * 
+ * Actions such as tmk/qmk keycodes can be associated with magic melodies as well as
+ * user function calls that are fed with user data.
+ * 
+ * The implementation allows for simple definition of single note lines, isolated chords
+ * or clusters as well as complex melodies that may consist of arbitrary combinations of
+ * the afforementioned types of phrases.
+ * 
+ * A melody is generally associated with a layer and melody recognition works 
+ * basically the same as layer selection. Only melodies that are associated with 
+ * the current layer or those below are available. This also means that.
+ * The same melody can be associated with a different action on a higher layer and
+ * melodies can also be overriden with noops on higher layers.
+ * 
+ * To allow all this to work, magic melodies are independent of keymaps and implemented
+ * on top of them. Because of this, phrases consist of keystroke sequences instead of
+ * keycode sequences. Every member of a phrase is defined according to the 
+ * row/column index of the key in the keyboard matrix.
+ * 
+ * If a melody completes, the associated action is triggered and
+ * all keystrokes that happend to this point are consumed, i.e. not passed through
+ * the keymap system. Only if a set of keystrokes does not match any defined melody, 
+ * all keystrokes (keydowns/keyups) are passed in the exact order to the keymap processing
+ * system as if they just happend, thereby also conserving the temporal order and the
+ * time interval between key events.
+ * 
+ * The implementation is based on a search tree. Tree nodes represent 
+ * phrases, i.e. notes, chords or clusters. Every newly defined melody is
+ * integrated into the search tree.
+ * Once a keystroke happens, the tree search tries to determine whether
+ * the key is associated with any melody by determining a matching phrase on the 
+ * current level of the search tree. Therefore, keystrokes are
+ * passed to the sucessors of the current phrase/tree node to let the 
+ * dedicated phrase implementation decide if the key is part of their definition. 
+ * Successor phrases signal completion or invalid state. The latter happens 
+ * as soon as a keystroke happens that is not part of the respective successor phrase.
+ * If one or more suitable successor phrases complete, the most
+ * suitable one is selected with respect to the current layer 
+ * and replaces the current phrase. I may also happen that no successor phrase 
+ * signals completion or invalidation e.g. if all successors are clusters or chords
+ * that are not yet copleted.
+ * If the most suitable successor that just copleted is a leaf node of the search tree, 
+ * the current magic melody is considered as completed and the action 
+ * that is associated with the melody is triggered. 
+ */
+
 #ifdef MAGIC_MELODIES_ENABLE
 
 #include "process_magic_melodies.h"
@@ -27,10 +94,14 @@
 #ifdef DEBUG_MAGIC_MELODIES
 #include "debug.h"
 #define MM_PRINTF(...) uprintf(__VA_ARGS__)
+#define MM_ERROR(...) uprintf("*** Error: " __VA_ARGS__)
 #else
-#include "nodebug.h"
 #define MM_PRINTF(...)
+#define MM_ERROR(...)
 #endif
+
+#define MM_CALL_VIRT_METHOD(THIS, METHOD, ...) \
+	THIS->vtable->METHOD(THIS, ##__VA_ARGS__);
 
 /* This function is defined in quantum/keymap_common.c 
  */
@@ -91,16 +162,6 @@ typedef struct {
 									
 } MM_Phrase_Vtable;
 
-typedef struct {
-	MM_User_Callback_Fun func;
-	void *	user_data;
-} MM_User_Callback;
-
-enum {
-	MM_Action_Keycode = 0,
-	MM_Action_User_Callback = 1
-};
-
 typedef struct MM_PhraseStruct {
 
 	MM_Phrase_Vtable *vtable;
@@ -112,12 +173,7 @@ typedef struct MM_PhraseStruct {
 	uint8_t n_allocated_successors;
 	uint8_t n_successors;
 	
-	union {
-		uint16_t keycode;
-		MM_User_Callback user_callback;
-	} action;
-	
-	uint8_t action_type;
+	MM_Action action;
 	
 	uint8_t state;
 	
@@ -169,44 +225,65 @@ static void mm_store_keychange(uint16_t keycode,
 	assert(mm_state.n_keys_changed < MM_MAX_KEYCHANGES);
 	
 	mm_state.pressed[mm_state.n_keys_changed] = record->event.pressed;
-	mm_state.keypos[mm_state.n_keys_changed] = record->event.key;
+	mm_state.keypos[mm_state.n_keys_changed].row = record->event.key.row;
+	mm_state.keypos[mm_state.n_keys_changed].col = record->event.key.col;
 	mm_state.keytimes[mm_state.n_keys_changed] = record->event.time;
 	
 	++mm_state.n_keys_changed;
+}
+
+static void mm_phrase_store_action(MM_Phrase *a_phrase, 
+											  MM_Action action)
+{
+	a_phrase->action.type = action.type;
+	
+	a_phrase->action.data.user_callback.func = NULL;
+	a_phrase->action.data.user_callback.user_data = NULL;
+	a_phrase->action.data.keycode = 0;
+	
+	switch(action.type) {
+		case MM_Action_Keycode:
+			a_phrase->action.data.keycode = action.data.keycode;
+			break;
+		case MM_Action_User_Callback:
+			a_phrase->action.data.user_callback.func 
+				= action.data.user_callback.func;
+			a_phrase->action.data.user_callback.user_data 
+				= action.data.user_callback.user_data;
+			break;
+	}
 }
 
 static void mm_flush_stored_keychanges(void)
 {
 	if(mm_state.n_keys_changed == 0) { return; }
 	
-	/* Process all events as if they had happened just now */
+	/* Process all events as if they had happened just now. Use a time
+	 * offset to achieve this.
+	 */
 	
 	mm_state.magic_melodies_temporarily_disabled = true;
        
 	uint16_t cur_time = timer_read();
 	
-	uint16_t actualOffset = cur_time - mm_state.keytimes[mm_state.n_keys_changed - 1];
+	uint16_t time_offset = cur_time - mm_state.keytimes[mm_state.n_keys_changed - 1];
 	
 	for(uint16_t i = 0; i < mm_state.n_keys_changed; ++i) {
 		
 		keyrecord_t record;
 		
-		record.event.time = mm_state.keytimes[i] + actualOffset;
-		record.event.key = mm_state.keypos[i];
+		record.event.time = mm_state.keytimes[i] + time_offset;
+		
+		record.event.key.row = mm_state.keypos[i].row;
+		record.event.key.col = mm_state.keypos[i].col;
 		record.event.pressed = mm_state.pressed[i];
+		
+		MM_PRINTF("Issuing keystroke at %d, %d\n", record.event.key.row, record.event.key.col);
 		
 		process_record_quantum(&record);
 	}
 	
 	mm_state.magic_melodies_temporarily_disabled = false;
-}
-
-static void mm_cleanup(void)
-{
-	mm_flush_stored_keychanges();
-	
-	mm_state.n_keys_changed = 0;
-	mm_state.current_phrase = NULL;
 }
 
 static void mm_phrase_reset(	MM_Phrase *a_This)
@@ -219,17 +296,13 @@ static void mm_phrase_reset(	MM_Phrase *a_This)
  * melody tree we only need to reset thoses phrases
  * that were candidates.
  */
-static void mm_phrase_reset_recursively(	MM_Phrase *a_This)
+static void mm_phrase_reset_successors(MM_Phrase *a_This)
 {
 	/* Reset all successor phrases if there are any
 	 */
 	for(uint8_t i = 0; i < a_This->n_successors; ++i) {
-		a_This->successors[i]->vtable->reset(a_This->successors[i]);
+		MM_CALL_VIRT_METHOD(a_This->successors[i], reset);
 	}
-		
-	if(a_This->parent) {
-		mm_phrase_reset_recursively(a_This->parent);
-	}		
 }
 	
 static void mm_abort_magic_melody(void)
@@ -240,11 +313,14 @@ static void mm_abort_magic_melody(void)
 	
 	/* The frase could not be parsed. Reset any previous phrases.
 	*/
-	mm_phrase_reset_recursively(mm_state.current_phrase);
+	mm_phrase_reset_successors(mm_state.current_phrase);
 	
 	/* Cleanup and issue all keypresses as if they happened without parsing a melody
 	*/
-	mm_cleanup();
+	mm_flush_stored_keychanges();
+	
+	mm_state.n_keys_changed = 0;
+	mm_state.current_phrase = NULL;
 }
 
 static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
@@ -273,10 +349,15 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 	}
 	#endif
 	
+	bool any_phrase_completed = false;
+		
+	/* Pass the keypress to the phrases and let them decide it they 
+	 * can use it. If a phrase cannot it becomes invalid and is not
+	 * processed further on this node level. This speeds up processing.
+	 */
 	for(uint8_t i = 0; i < a_current_phrase->n_successors; ++i) {
 		
-// 		a_current_phrase->successors[i]->vtable->print_self(
-// 			a_current_phrase->successors[i]);
+		// MM_CALL_VIRT_METHOD(a_current_phrase->successors[i], print_self);
 		
 		/* Accept only paths through the search tree whose
 		 * nodes' layer tags are lower or equal the current layer
@@ -304,44 +385,84 @@ static uint8_t mm_phrase_consider_keychange(	MM_Phrase **current_phrase,
 				
 			case MM_Phrase_Completed:
 				
-// 				MM_PRINTF("+\n");
-				
-				/* The successor that is first completed becomes the 
-				* new current phrase
-				*/
-				*current_phrase = a_current_phrase->successors[i];
-				a_current_phrase = *current_phrase;
-					
-				/* The melody is finished. Trigger the associated action.
-				 */
-				if(0 == a_current_phrase->n_successors) {
-					
-					a_current_phrase->vtable->trigger_action(a_current_phrase);
-					
-					mm_phrase_reset_recursively(a_current_phrase->parent);
-					
-					mm_state.current_phrase = NULL;
-					
-					return MM_Phrase_Completed;
-				}
-				else {
-					
-					return MM_Phrase_In_Progress;
-				}
+				all_successors_invalid = false;
+				any_phrase_completed = true;
+
 				break;
 			case MM_Phrase_Invalid:
 // 				MM_PRINTF("Phrase invalid");
 				break;
 		}
 	}
-		
+	
+	/* If all successors are invalid, the keystroke chain does not
+	 * match any defined melody.
+	 */
 	if(all_successors_invalid) {
-		
-		MM_PRINTF("-\n");
-		
-		mm_abort_magic_melody();
 					
 		return MM_Phrase_Invalid;
+	}
+	
+	/* If any phrase completed we have to find the most suitable one
+	 * and either terminate melody processing if the matching successor
+	 * is a leaf node, or replace the current phrase to await further 
+	 * keystrokes.
+	 */
+	else if(any_phrase_completed) {
+		
+		int8_t highest_layer = -1;
+		int8_t match_id = -1;
+		
+		/* Find the most suitable phrase with respect to the current layer.
+		 */
+		for(uint8_t i = 0; i < a_current_phrase->n_successors; ++i) {
+		
+// 			MM_CALL_VIRT_METHOD(a_current_phrase->successors[i], print_self);
+		
+			/* Accept only paths through the search tree whose
+			* nodes' layer tags are lower or equal the current layer
+			*/
+			if(a_current_phrase->successors[i]->layer > layer) { continue; }
+			
+			if(a_current_phrase->successors[i]->state != MM_Phrase_Completed) {
+				continue;
+			}
+			
+			if(a_current_phrase->successors[i]->layer > highest_layer) {
+				highest_layer = a_current_phrase->successors[i]->layer;
+				match_id = i;
+			}
+		}
+		
+		assert(match_id >= 0);
+				
+		/* Cleanup successors of the current node for further melody processing.
+		 */
+		mm_phrase_reset_successors(a_current_phrase);
+		
+		/* Replace the current phrase.
+		*/
+		*current_phrase = a_current_phrase->successors[match_id];
+		a_current_phrase = *current_phrase;
+			
+		if(0 == a_current_phrase->n_successors) {
+			
+			/* The melody is completed. Trigger the action that is associated
+			* with the leaf node.
+			*/
+			MM_CALL_VIRT_METHOD(a_current_phrase, trigger_action);
+			
+			mm_state.current_phrase = NULL;
+			
+			return MM_Phrase_Completed;
+		}
+		else {
+			
+			/* The melody is still in progress. We continue with the 
+			 * new current node as soon as the next keystroke happens.
+			 */
+			return MM_Phrase_In_Progress;
+		}
 	}
 	
 	return MM_Phrase_In_Progress;
@@ -351,10 +472,10 @@ static void mm_phrase_trigger_action(MM_Phrase *a_MM_Phrase) {
 	
 	MM_PRINTF("*\n");
 	
-	switch(a_MM_Phrase->action_type) {
+	switch(a_MM_Phrase->action.type) {
 		case MM_Action_Keycode:
 	
-			if(a_MM_Phrase->action.keycode != 0) {
+			if(a_MM_Phrase->action.data.keycode != 0) {
 				
 				/* Construct a dummy record
 				*/
@@ -363,19 +484,34 @@ static void mm_phrase_trigger_action(MM_Phrase *a_MM_Phrase) {
 					record.event.key.col = 0;
 					record.event.pressed = true;
 					record.event.time = timer_read();
+					
+				/* Use the quantum/tmk system to trigger the action
+				 * thereby using a fictituous a key (0, 0) with which the action 
+				 * keycode is associated. We pretend that the respective key
+				 * was hit and released to make sure that any action that
+				 * requires both events is correctly processed.
+				 * Unfortunatelly this means that some actions that
+				 * require keys to be held do not make sense, e.g.
+				 * modifier keys or MO(...), etc.
+				 */
 				
-				uint16_t configured_keycode = keycode_config(a_MM_Phrase->action.keycode);
+				uint16_t configured_keycode = keycode_config(a_MM_Phrase->action.data.keycode);
 				
 				action_t action = action_for_configured_keycode(configured_keycode); 
 			
+				process_action(&record, action);
+				
+				record.event.pressed = false;
+				record.event.time = timer_read();
+				
 				process_action(&record, action);
 			}
 			break;
 		case MM_Action_User_Callback:
 			
-			if(a_MM_Phrase->action.user_callback.func) {
-				a_MM_Phrase->action.user_callback.func(
-					a_MM_Phrase->action.user_callback.user_data);
+			if(a_MM_Phrase->action.data.user_callback.func) {
+				a_MM_Phrase->action.data.user_callback.func(
+					a_MM_Phrase->action.data.user_callback.user_data);
 			}
 			break;
 	}
@@ -452,9 +588,10 @@ static bool mm_phrase_equals(MM_Phrase *p1, MM_Phrase *p2)
 }
 
 static void mm_phrase_free(MM_Phrase *a_This) {
-    a_This->vtable->destroy(a_This);
+	
+	MM_CALL_VIRT_METHOD(a_This, destroy);
 
-    free(a_This);
+	free(a_This);
 }
 
 static MM_Phrase* mm_phrase_get_equivalent_successor(
@@ -482,10 +619,10 @@ static void mm_phrase_print_self(MM_Phrase *p)
 	MM_PRINTF("   successors: 0x%" PRIXPTR "\n", (void*)&p->successors);
 	MM_PRINTF("   n_allocated_successors: %d\n", p->n_allocated_successors);
 	MM_PRINTF("   n_successors: %d\n", p->n_successors);
-	MM_PRINTF("   action_type: %d\n", p->action_type);
-	MM_PRINTF("   action_keycode: %d\n", p->action.keycode);
-	MM_PRINTF("   action_user_func: %0x%" PRIXPTR "\n", p->action.user_callback.func);
-	MM_PRINTF("   action_user_data: %0x%" PRIXPTR "\n", p->action.user_callback.user_data);
+	MM_PRINTF("   action.type: %d\n", p->action.type);
+	MM_PRINTF("   action_keycode: %d\n", p->action.data.keycode);
+	MM_PRINTF("   action_user_func: %0x%" PRIXPTR "\n", p->action.data.user_callback.func);
+	MM_PRINTF("   action_user_data: %0x%" PRIXPTR "\n", p->action.data.user_callback.user_data);
 	MM_PRINTF("   state: %d\n", p->state);
 	MM_PRINTF("   layer: %d\n", p->layer);
 }
@@ -516,10 +653,10 @@ static MM_Phrase *mm_phrase_new(MM_Phrase *a_MM_Phrase) {
     a_MM_Phrase->successors = NULL;
 	 a_MM_Phrase->n_allocated_successors = 0;
     a_MM_Phrase->n_successors = 0;
-    a_MM_Phrase->action.keycode = 0;
-    a_MM_Phrase->action_type = MM_Action_Keycode;
-    a_MM_Phrase->action.user_callback.func = NULL;
-    a_MM_Phrase->action.user_callback.user_data = NULL;
+    a_MM_Phrase->action.data.keycode = 0;
+    a_MM_Phrase->action.type = MM_Action_Keycode;
+    a_MM_Phrase->action.data.user_callback.func = NULL;
+    a_MM_Phrase->action.data.user_callback.user_data = NULL;
     a_MM_Phrase->state = MM_Phrase_In_Progress;
     a_MM_Phrase->layer = 0;
 	 
@@ -557,7 +694,7 @@ static uint8_t mm_note_successor_consider_keychange(
 		else {
 			if(a_This->pressed) {
 	// 		MM_PRINTF("note successfully finished\n");
-				MM_PRINTF("n");
+				MM_PRINTF("N");
 				a_This->phrase_inventory.state = MM_Phrase_Completed;
 			}
 		}
@@ -691,7 +828,7 @@ static uint8_t mm_chord_successor_consider_keychange(
 		/* Chord completed
 		 */
 		a_This->phrase_inventory.state = MM_Phrase_Completed;
- 		MM_PRINTF("c");
+ 		MM_PRINTF("C");
 	}
 	
 	return a_This->phrase_inventory.state;
@@ -871,7 +1008,7 @@ static uint8_t mm_cluster_successor_consider_keychange(
 		/* Cluster completed
 		 */
 		a_This->phrase_inventory.state = MM_Phrase_Completed;
- 		MM_PRINTF("o");
+ 		MM_PRINTF("O");
 	}
 	
 	return a_This->phrase_inventory.state;
@@ -1016,21 +1153,18 @@ void mm_finalize_magic_melodies(void) {
 	mm_phrase_free_successors(&mm_state.melody_root);
 }
 
-void *mm_create_note(keypos_t keypos, 
-							uint16_t action_keycode)
+void *mm_create_note(keypos_t keypos)
 {
     MM_Note *a_note = (MM_Note*)mm_note_new(mm_note_alloc());
 	 
 	 a_note->keypos = keypos;
-	 a_note->phrase_inventory.action.keycode = action_keycode;
 	 
 	 /* Return the new end of the melody */
 	 return a_note;
 }
 
 void *mm_create_chord(	keypos_t *keypos,
-								uint8_t n_members, 
-								uint16_t action_keycode)
+								uint8_t n_members)
 {
 	MM_Chord *a_chord = (MM_Chord*)mm_chord_new(mm_chord_alloc());
 	 	 
@@ -1040,16 +1174,13 @@ void *mm_create_chord(	keypos_t *keypos,
 		a_chord->keypos[i] = keypos[i];
 	}
 	 
-	a_chord->phrase_inventory.action.keycode = action_keycode;
-	 
 	/* Return the new end of the melody */
 	return a_chord;
 }
 
 void *mm_create_cluster(
 									keypos_t *keypos,
-									uint8_t n_members, 
-									uint16_t action_keycode)
+									uint8_t n_members)
 {
 	MM_Cluster *a_cluster = (MM_Cluster*)mm_cluster_new(mm_cluster_alloc());
 	 
@@ -1058,17 +1189,34 @@ void *mm_create_cluster(
 	for(uint8_t i = 0; i < n_members; ++i) {
 		a_cluster->keypos[i] = keypos[i];
 	}
-	 
-	a_cluster->phrase_inventory.action.keycode = action_keycode;
 	
 	/* Return the new end of the melody */
 	return a_cluster;
 }
 
-static void *mm_melody_from_list(MM_Phrase **phrases,
+#if DEBUG_MAGIC_MELODIES
+static void mm_recursively_print_melody(MM_Phrase *p)
+{
+	if(	p->parent
+		&& p->parent != &mm_state.melody_root) {
+		
+		mm_recursively_print_melody(p->parent);
+	}
+	
+	MM_CALL_VIRT_METHOD(p, print_self);
+}
+#endif
+
+static void *mm_melody_from_list(	uint8_t layer,
+												MM_Action action,
+												MM_Phrase **phrases,
 												int n_phrases)
 { 
 	MM_Phrase *parent_phrase = &mm_state.melody_root;
+	
+	/* Store action.
+	 */
+	mm_phrase_store_action(phrases[n_phrases - 1], action);
 	
 	MM_PRINTF("   %d members\n", n_phrases);
 	
@@ -1081,15 +1229,25 @@ static void *mm_melody_from_list(MM_Phrase **phrases,
 			
 		MM_PRINTF("   member %d: ", i);
 		
-		if(equivalent_successor) {
+		if(	equivalent_successor
+			
+			/* Only share interior nodes and ...
+			 */
+			&& equivalent_successor->successors
+			/* ... only if the 
+			 * newly registered node on the respective level is 
+			 * not a leaf node.
+			 */ 
+			&& (i < (n_phrases - 1))
+		) {
 			
 			MM_PRINTF("already present\n");
 			
 			parent_phrase = equivalent_successor;
 			
-			if(curPhrase->layer < equivalent_successor->layer) {
+			if(layer < equivalent_successor->layer) {
 				
-				equivalent_successor->layer = curPhrase->layer;
+				equivalent_successor->layer = layer;
 			}
 			
 			/* The successor is already registered in the search tree. Delete the newly created version.
@@ -1099,6 +1257,38 @@ static void *mm_melody_from_list(MM_Phrase **phrases,
 		else {
 			
 			MM_PRINTF("newly defined\n");
+			
+			#if DEBUG_MAGIC_MELODIES
+			
+			/* Detect melody ambiguities
+			 */
+			if(equivalent_successor) {
+				if(	
+					/* Melodies are ambiguous if ...
+					 * the conflicting nodes/phrases are both leaf phrases
+					 */
+						(i == (n_phrases - 1))
+					&&	!equivalent_successor->successors
+					
+					/* And defined for the same layer
+					 */
+					&& (equivalent_successor->layer == layer)
+				) {
+					MM_ERROR("Conflicting melodies detected. "
+						"The phrases of the conflicting melodies are listed below.\n");
+					
+					MM_ERROR("Previously defined:\n");
+					mm_recursively_print_melody(equivalent_successor);
+					
+					MM_ERROR("Conflicting:\n");
+					for (int i = 0; i < n_phrases; i++) {
+						MM_CALL_VIRT_METHOD(phrases[i], print_self);
+					}
+				}
+			}
+			#endif /* if DEBUG_MAGIC_MELODIES */
+					
+			curPhrase->layer = layer;
 			
 			mm_phrase_add_successor(parent_phrase, curPhrase);
 			
@@ -1112,6 +1302,7 @@ static void *mm_melody_from_list(MM_Phrase **phrases,
 }
 
 void *mm_melody(		uint8_t layer, 
+							MM_Action action,
 							int count, ...)
 { 
 	MM_PRINTF("Adding magic melody\n");
@@ -1128,12 +1319,10 @@ void *mm_melody(		uint8_t layer,
 	for (int i = 0; i < count; i++) { 
 		
 		phrases[i] = va_arg (ap, MM_Phrase *);
-		
-		phrases[i]->layer = layer;
 	}
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(phrases, count);
+		= mm_melody_from_list(layer, action, phrases, count);
 	
 	free(phrases);
 
@@ -1142,48 +1331,44 @@ void *mm_melody(		uint8_t layer,
 	return leafPhrase;
 }
 
-void *mm_chord(			uint8_t layer, 
+void *mm_chord(		uint8_t layer, 
+							MM_Action action, 
 							keypos_t *keypos,
-							uint8_t n_members, 
-							uint16_t action_keycode)
+							uint8_t n_members)
 {   	
 	MM_PRINTF("Adding chord\n");
 	
 	MM_Phrase *cPhrase = 
-		(MM_Phrase *)mm_create_chord(keypos, n_members, action_keycode);
-	
-	cPhrase->layer = layer;
+		(MM_Phrase *)mm_create_chord(keypos, n_members);
 		
 	MM_Phrase *phrases[1] = { cPhrase };
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(phrases, 1);
+		= mm_melody_from_list(layer, action, phrases, 1);
 		
 	return leafPhrase;
 }
 
 void *mm_cluster(		uint8_t layer, 
+							MM_Action action, 
 							keypos_t *keypos,
-							uint8_t n_members, 
-							uint16_t action_keycode)
+							uint8_t n_members)
 {   	
 	MM_PRINTF("Adding cluster\n");
 	
 	MM_Phrase *cPhrase = 
-		(MM_Phrase *)mm_create_cluster(keypos, n_members, action_keycode);
-	
-	cPhrase->layer = layer;
+		(MM_Phrase *)mm_create_cluster(keypos, n_members);
 		
 	MM_Phrase *phrases[1] = { cPhrase };
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(phrases, 1);
+		= mm_melody_from_list(layer, action, phrases, 1);
 		
 	return leafPhrase;
 }
 
 void *mm_single_note_line(	uint8_t layer,
-							uint16_t action_keycode, 
+							MM_Action action, 
 							int count, ...)
 {
 	MM_PRINTF("Adding single note line\n");
@@ -1200,23 +1385,14 @@ void *mm_single_note_line(	uint8_t layer,
 	for (int i = 0; i < count; i++) {
 		
 		keypos_t curKeypos = va_arg (ap, keypos_t); 
-		
-		uint16_t a_action_keycode = MM_NO_ACTION;
-		
-		if(i == (count - 1)) {
-			a_action_keycode = action_keycode;
-		}
-		
-		void *new_note = mm_create_note(curKeypos,
-												  a_action_keycode);
+
+		void *new_note = mm_create_note(curKeypos);
 		
 		phrases[i] = (MM_Phrase *)new_note;
-		
-		phrases[i]->layer = layer;
 	}
 	
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(phrases, count);
+		= mm_melody_from_list(layer, action, phrases, count);
 	
 	free(phrases);
 
@@ -1226,7 +1402,7 @@ void *mm_single_note_line(	uint8_t layer,
 }
 
 void *mm_tap_dance(	uint8_t layer,
-							uint16_t action_keycode, 
+							MM_Action action, 
 							int n_taps, 
 							keypos_t curKeypos)
 {
@@ -1237,51 +1413,26 @@ void *mm_tap_dance(	uint8_t layer,
 
 		
 	for (int i = 0; i < n_taps; i++) {
-		
-		uint16_t a_action_keycode = MM_NO_ACTION;
-		
-		if(i == (n_taps - 1)) {
-			a_action_keycode = action_keycode;
-		}
-		
-		void *new_note = mm_create_note(curKeypos,
-												  a_action_keycode);
+
+		void *new_note = mm_create_note(curKeypos);
 		
 		phrases[i] = (MM_Phrase *)new_note;
-		
-		phrases[i]->layer = layer;
 	}
 			
 	MM_Phrase *leafPhrase 
-		= mm_melody_from_list(phrases, n_taps);
+		= mm_melody_from_list(layer, action, phrases, n_taps);
 	
 	free(phrases);
 	
 	return leafPhrase;
 }
 
-void mm_set_user_function(void *phrase__,
-								  MM_User_Callback_Fun func,
-								  void *user_data)
+void mm_set_action(	void *phrase__,
+							MM_Action action)
 {
 	MM_Phrase *phrase = (MM_Phrase *)phrase__;
 	
-	phrase->action_type = MM_Action_User_Callback;
-	phrase->action.keycode = 0;
-	phrase->action.user_callback.func = func;
-	phrase->action.user_callback.user_data = user_data;
-}
-
-void mm_set_action_keycode(
-									void *phrase__,
-									uint16_t action_keycode)
-{
-	MM_Phrase *phrase = (MM_Phrase *)phrase__;
-	
-	phrase->action_type = MM_Action_Keycode;
-	phrase->action.user_callback.func = NULL;
-	phrase->action.user_callback.user_data = NULL;
-	phrase->action.keycode = action_keycode;
+	mm_phrase_store_action(phrase, action);
 }
 
 bool mm_check_timeout(void)
@@ -1303,7 +1454,8 @@ bool mm_check_timeout(void)
 	return false;
 }
 
-bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record)
+bool mm_process_magic_melodies(uint16_t keycode, 
+										 keyrecord_t *record)
 {
 	/* When a melody could not be finished, all keystrokes are
 	 * processed through the process_record_quantum method.
@@ -1335,12 +1487,14 @@ bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record)
 			return false;
 		}
 	
-		return true;
+		return false;
 	}
+	
+	MM_PRINTF("Starting keyprocessing\n");
 	
 	if(!mm_state.current_phrase) {
 		
-		MM_PRINTF("New melody \n");
+// 		MM_PRINTF("New melody \n");
 		
 		mm_state.current_phrase = &mm_state.melody_root;
 		mm_state.time_last_keypress = timer_read();
@@ -1368,7 +1522,14 @@ bool mm_process_magic_melodies(uint16_t keycode, keyrecord_t *record)
 		case MM_Phrase_Completed:
 			return false;
 		case MM_Phrase_Invalid:
-			return true;
+			
+			MM_PRINTF("-\n");
+		
+			mm_abort_magic_melody();
+			
+// 			return false; /* The key(s) have been already processed */
+			return true; // Why does this require true to work and 
+			// why is t not written?
 	}
 	
 	return true;

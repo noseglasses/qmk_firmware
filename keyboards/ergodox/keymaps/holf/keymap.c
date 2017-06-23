@@ -246,6 +246,10 @@ const uint16_t PROGMEM fn_actions[] = {
 };
 
 void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
+	
+	/* Only react on keyup
+	 */
+	if(!record->event.pressed) { return; }
 
   switch (id) {
     case ff_a_melody_1:
@@ -378,7 +382,8 @@ void init_magic_melodies(void)
 {
 	mm_set_abort_keypos(MM_ABORT_KEY);
 	
-	mm_set_timeout_ms(20000);
+// 	mm_set_timeout_ms(20000);
+	mm_set_timeout_ms(500);
 	
 	/* Magic melodies are inherited by higher layers unless
 	 * overridden.
@@ -388,27 +393,29 @@ void init_magic_melodies(void)
 	 */
 	mm_melody(
 		ff_layer_base,
+		MM_ACTION_KEYCODE(F(ff_a_melody_1)),
 		2,
-		mm_create_note(Key_52, MM_NO_ACTION),
-		mm_create_note(Key_5B, F(ff_a_melody_1) /* led signal */)
+		mm_create_note(Key_52),
+		mm_create_note(Key_5B)
 	);
 	
 	/* Left inner large thumb key then right inner large thumb key
 	 */
 	mm_melody(
 		ff_layer_base,
+		MM_ACTION_KEYCODE(F(ff_a_melody_2)),
 		2,
-		mm_create_note(Key_52, MM_NO_ACTION),
-		mm_create_note(Key_5A, F(ff_a_melody_2) /* led flash */)
+		mm_create_note(Key_52),
+		mm_create_note(Key_5A)
 	);
 	
-	keypos_t chord_keys[3] 
+	keypos_t chord_keys[] 
 		= {	CHORD_KEY_1,
 				CHORD_KEY_2,
 				CHORD_KEY_3
 			};
 	
-	keypos_t cluster_keys[3] 
+	keypos_t cluster_keys[] 
 		= {	CLUSTER_KEY_1,
 				CLUSTER_KEY_2,
 				CLUSTER_KEY_3
@@ -419,16 +426,15 @@ void init_magic_melodies(void)
 	 */
 	mm_melody(
 		ff_layer_base,
+		MM_ACTION_KEYCODE(F(ff_a_chord_and_cluster)),
 		2,
 		mm_create_chord(
 			chord_keys,
-			MM_NUM_KEYS(chord_keys),
-			MM_NO_ACTION
+			MM_NUM_KEYS(chord_keys)
 		),
 		mm_create_cluster(
 			cluster_keys,
-			MM_NUM_KEYS(cluster_keys),
-			F(ff_a_chord_and_cluster)
+			MM_NUM_KEYS(cluster_keys)
 		)
 	);
 	
@@ -436,7 +442,7 @@ void init_magic_melodies(void)
 	 */
 	mm_single_note_line(
 		ff_layer_base,
-		F(ff_a_single_note_line),
+		MM_ACTION_KEYCODE(F(ff_a_single_note_line)),
 		3,
 		SINGLE_NOTE_LINE_KEY_1,
 		SINGLE_NOTE_LINE_KEY_2,
@@ -448,7 +454,7 @@ void init_magic_melodies(void)
 	 */
 	mm_single_note_line(
 		ff_layer_base,
-		F(ff_a_single_note_line_double_key),
+		MM_ACTION_KEYCODE(F(ff_a_single_note_line_double_key)),
 		3,
 		SINGLE_NOTE_LINE_KEY_1,
 		SINGLE_NOTE_LINE_KEY_1,
@@ -459,41 +465,36 @@ void init_magic_melodies(void)
 	 */
 	mm_tap_dance(
 		ff_layer_base,
-		F(ff_a_tap_dance),
+		MM_ACTION_KEYCODE(F(ff_a_tap_dance)),
 		3,
 		SINGLE_NOTE_LINE_KEY_1
 	);
 	
 	/* Single chord of left thumb inner large key, right thumb both large keys
 	 */
-	keypos_t single_chord_keys[3] 
+	keypos_t single_chord_keys[] 
 		= {	Key_52,
 				Key_5B,
 				Key_5A
 			};
 	mm_chord(
 		ff_layer_aux,
+		MM_ACTION_KEYCODE(F(ff_a_single_chord)),
 		single_chord_keys,
-		MM_NUM_KEYS(single_chord_keys),
-		F(ff_a_single_chord)
+		MM_NUM_KEYS(single_chord_keys)
 	);
 	
 	/* A single cluster of j, k and l (QWERTY).
 	 */
-	void *the_cluster 
-		=	
 	mm_cluster(
 		ff_layer_aux,
+		MM_ACTION_USER_CALLBACK(
+			the_cluster_callback,
+			(void*)(size_t)13
+		),
 		cluster_keys,
-		MM_NUM_KEYS(cluster_keys),
-		MM_NO_ACTION /*The action is defined as a user function below */
+		MM_NUM_KEYS(cluster_keys)
 	);
-	
-	/* Add a user function as cluster action.
-	 */
-	mm_set_user_function(the_cluster,
-								the_cluster_callback,
-								(void*)(size_t)13);
 	
    #define FF_BACK_LINE_1 MM_KEYPOS_HEX(4, 2)
    #define FF_BACK_LINE_2 MM_KEYPOS_HEX(4, 3)
@@ -503,19 +504,22 @@ void init_magic_melodies(void)
    #define FF_BACK_LINE_6 MM_KEYPOS_HEX(4, B)
 	
 	/* A magic melody to switch to the aux layer.
-	 */
-	mm_single_note_line(
+	 */	
+	keypos_t layer_switch_cluster[] 
+		= {			
+			FF_BACK_LINE_1,
+			FF_BACK_LINE_2,
+			FF_BACK_LINE_3,
+			FF_BACK_LINE_4,
+			FF_BACK_LINE_5,
+			FF_BACK_LINE_6
+			};
+	mm_cluster(
 
 		ff_layer_base,
-// 		TG(ff_layer_aux),
-		TG(ff_layer_symbol),  /* Toggeling layers does not work. Why?*/
-		6,
-		FF_BACK_LINE_1,
-		FF_BACK_LINE_2,
-		FF_BACK_LINE_3,
-		FF_BACK_LINE_4,
-		FF_BACK_LINE_5,
-		FF_BACK_LINE_6
+		MM_ACTION_KEYCODE(TG(ff_layer_aux)),
+		layer_switch_cluster,
+		MM_NUM_KEYS(layer_switch_cluster)
 	);
 }
 

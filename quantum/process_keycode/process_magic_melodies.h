@@ -22,76 +22,123 @@
 #include "tmk_core/common/keyboard.h"
 
 /* Note: All definition functions return a pointer to the melody that can be 
- *       passed e.g. to mm_set_user_function or mm_set_action_keycode
+ *       passed e.g. to mm_set_action.
  */
+
+enum {
+	MM_Action_None = 0,
+	MM_Action_Keycode,
+	MM_Action_User_Callback
+};
+
+typedef void (*MM_User_Callback_Fun)(void *);
+
+typedef struct {
+	MM_User_Callback_Fun func;
+	void *	user_data;
+} MM_User_Callback;
+
+typedef union {
+	uint16_t keycode;
+	MM_User_Callback user_callback;
+} MM_ActionDataUnion;
+
+typedef struct {
+	MM_ActionDataUnion data;
+	uint8_t type;
+} MM_Action;
+	
+#define MM_ACTION_KEYCODE(KK) \
+	(MM_Action) {	\
+		.type = MM_Action_Keycode, \
+		.data = (MM_ActionDataUnion) { \
+			.keycode = KK  \
+		} \
+	}
+	
+#define MM_ACTION_USER_CALLBACK(FUNC, USER_DATA) \
+	(MM_Action) { \
+		.type = MM_Action_User_Callback, \
+		.data = (MM_ActionDataUnion) { \
+			.user_callback = (MM_User_Callback) { \
+				.func = FUNC, \
+				.user_data = USER_DATA \
+			} \
+		} \
+	}
+	
+#define MM_ACTION_NOOP \
+	(MM_Action) { \
+		.type = MM_Action_None, \
+		.data = (MM_ActionDataUnion) { \
+			.user_callback = (MM_User_Callback) { \
+				.func = NULL, \
+				.user_data = NULL \
+			} \
+		} \
+	}
 
 /* Define single note lines.
  */
 void *mm_single_note_line(
 							uint8_t layer, 
-							uint16_t action_keycode, 
+							MM_Action action, 
 							int count, ...);
 
 /* Define a chord (all members must be activated/pressed simultaneously).
  */
-void *mm_chord(			uint8_t layer, 
+void *mm_chord(		uint8_t layer,
+							MM_Action action,
 							keypos_t *keypos,
-							uint8_t n_members, 
-							uint16_t action_keycode);
+							uint8_t n_members);
 
 /* Define a cluste (all members must be activated/pressed at least once for
  * the cluster to be considered as completed).
  */
 void *mm_cluster(		uint8_t layer, 
+							MM_Action action, 
 							keypos_t *keypos,
-							uint8_t n_members, 
-							uint16_t action_keycode);
+							uint8_t n_members);
 
 /* Define tap dances (great thanks to algernon for the inspiration)
  */
 void *mm_tap_dance(
 							uint8_t layer, 
-							uint16_t action_keycode, 
+							MM_Action action, 
 							int n_taps, 
 							keypos_t curKeypos);
 
 /* Use the following functions to create complex melodies as sequences of
  * notes, chords and clusters.
  */
-void *mm_create_note(keypos_t keypos, 
-							uint16_t action_keycode);
+void *mm_create_note(keypos_t keypos);
 
 void *mm_create_chord(	
 							keypos_t *keypos,
-							uint8_t n_members, 
-							uint16_t action_keycode);
+							uint8_t n_members);
 
 void *mm_create_cluster(
 							keypos_t *keypos,
-							uint8_t n_members, 
-							uint16_t action_keycode);
+							uint8_t n_members);
 
 void *mm_melody(		uint8_t layer, 
+							MM_Action action, 
 							int count, ...);
 
-typedef void (*MM_User_Callback_Fun)(void *);
-
-/* Use this to add a user callback instead of a keycode
+/* Use this to modify actions after definition (is this necessary at all?)
  */
-void mm_set_user_function(void *melody,
-								  MM_User_Callback_Fun func,
-								  void *user_data);
-
-/* Use this to set an action keycode
- */
-void mm_set_action_keycode(
+void mm_set_action(
 									void *melody,
-									uint16_t action_keycode);
+									MM_Action action);
 
-/* Configuration functions
+/* Configuration functions */
+
+/* Define a key that aborts melody processing 
  */
 void mm_set_abort_keypos(keypos_t keypos);
 
+/* Set the melody processing timeout 
+ */
 void mm_set_timeout_ms(uint16_t timeout);
 
 /* Is finalization required?
