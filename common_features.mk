@@ -98,9 +98,12 @@ ifeq ($(strip $(TAP_DANCE_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/process_keycode/process_tap_dance.c
 endif
 
-ifeq ($(strip $(MAGIC_MELODIES_ENABLE)), yes)
-    OPT_DEFS += -DMAGIC_MELODIES_ENABLE
-    SRC += $(QUANTUM_DIR)/process_keycode/process_magic_melodies.c
+ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
+    OPT_DEFS += -DPAPAGENO_ENABLE
+    EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno
+    #OPT_DEFS += -I$(QUANTUM_DIR)/../libs/papageno
+    SRC += $(QUANTUM_DIR)/../lib/papageno/papageno.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/papageno_qmk.c
 endif
 
 
