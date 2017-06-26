@@ -246,6 +246,10 @@ const uint16_t PROGMEM fn_actions[] = {
 };
 
 void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
+	
+	/* Only react on keyup
+	 */
+	if(!record->event.pressed) { return; }
 
   switch (id) {
     case ff_a_melody_1:
@@ -380,7 +384,8 @@ void init_papageno(void)
 	
 	pg_set_abort_key_id(PG_ABORT_KEY);
 	
-	pg_qmk_set_timeout_ms(20000);
+	//pg_qmk_set_timeout_ms(20000);
+	pg_qmk_set_timeout_ms(500);
 	
 	/* Magic melodies are inherited by higher layers unless
 	 * overridden.
@@ -404,7 +409,7 @@ void init_papageno(void)
 	 */
 	pg_melody(
 		ff_layer_base,
-		2,
+		2, 
 		pg_create_note(Key_52),
 		pg_set_action(
 			pg_create_note(Key_5A),
@@ -414,13 +419,13 @@ void init_papageno(void)
 		)
 	);
 	
-	PG_Key_Id chord_keys[3] 
+	PG_Key_Id chord_keys[] 
 		= {	CHORD_KEY_1,
 				CHORD_KEY_2,
 				CHORD_KEY_3
 			};
 	
-	PG_Key_Id cluster_keys[3] 
+	PG_Key_Id cluster_keys[] 
 		= {	CLUSTER_KEY_1,
 				CLUSTER_KEY_2,
 				CLUSTER_KEY_3
@@ -480,6 +485,11 @@ void init_papageno(void)
 		ff_layer_base,
 		SINGLE_NOTE_LINE_KEY_1,
 		PG_Action_Noop_Fallthrough,
+							/* Use PG_Action_Noop_Fallthrough if you want fall through, 
+								e.g. if something happens after three and five keypresses
+								and you want to fall through to the three keypress action
+								if only four keypresses arrived before timeout. */
+		PG_N_TAPS(1) /* one tap definition */,
 		3,
 		PG_QMK_ACTION_KEYCODE(
 			F(ff_a_tap_dance)
@@ -488,7 +498,7 @@ void init_papageno(void)
 	
 	/* Single chord of left thumb inner large key, right thumb both large keys
 	 */
-	PG_Key_Id single_chord_keys[3] 
+	PG_Key_Id single_chord_keys[] 
 		= {	Key_52,
 				Key_5B,
 				Key_5A

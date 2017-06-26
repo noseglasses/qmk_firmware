@@ -152,7 +152,7 @@ action_t action_for_key(uint8_t layer, keypos_t key)
     // keycode remapping
     keycode = keycode_config(keycode);
 	 
-	 return action_for_configured_keycode(keycode);
+    return action_for_configured_keycode(keycode);
 }
 
 __attribute__ ((weak))
