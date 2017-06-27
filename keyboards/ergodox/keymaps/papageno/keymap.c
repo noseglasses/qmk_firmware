@@ -9,7 +9,7 @@
 
 #include "keymap_nordic.h"
 
-#include "papageno_qmk.h"
+#include "process_papageno.h"
 
 #define FF_DEBUG
 
@@ -304,9 +304,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // 	FF_PRINTF("   row: %d\n", record->event.key.row);
 // 	FF_PRINTF("   col: %d\n", record->event.key.col);is
 	
-	bool pg_process_result = pg_qmk_process_key_event(keycode,record );
+	bool ppg_process_result = ppg_qmk_process_key_event(keycode,record );
 	
-	if(!pg_process_result) { return false; }
+	if(!ppg_process_result) { return false; }
 	
   switch (keycode) {
     // dynamically generate these.
@@ -360,32 +360,32 @@ static void the_cluster_callback(void *context)
     k5C,k5B,k5A
 #endif
 
-#define Key_52 PG_QMK_KEYPOS_HEX(5, 2)
-#define Key_5B PG_QMK_KEYPOS_HEX(5, B)
-#define Key_5A PG_QMK_KEYPOS_HEX(5, A)
+#define Key_52 PPG_QMK_KEYPOS_HEX(5, 2)
+#define Key_5B PPG_QMK_KEYPOS_HEX(5, B)
+#define Key_5A PPG_QMK_KEYPOS_HEX(5, A)
 
-#define CHORD_KEY_1 PG_QMK_KEYPOS_HEX(2, 2)
-#define CHORD_KEY_2 PG_QMK_KEYPOS_HEX(2, 3)
-#define CHORD_KEY_3 PG_QMK_KEYPOS_HEX(2, 4)
+#define CHORD_KEY_1 PPG_QMK_KEYPOS_HEX(2, 2)
+#define CHORD_KEY_2 PPG_QMK_KEYPOS_HEX(2, 3)
+#define CHORD_KEY_3 PPG_QMK_KEYPOS_HEX(2, 4)
 
-#define CLUSTER_KEY_1 PG_QMK_KEYPOS_HEX(2, 9)
-#define CLUSTER_KEY_2 PG_QMK_KEYPOS_HEX(2, A)
-#define CLUSTER_KEY_3 PG_QMK_KEYPOS_HEX(2, B)
+#define CLUSTER_KEY_1 PPG_QMK_KEYPOS_HEX(2, 9)
+#define CLUSTER_KEY_2 PPG_QMK_KEYPOS_HEX(2, A)
+#define CLUSTER_KEY_3 PPG_QMK_KEYPOS_HEX(2, B)
 
-#define SINGLE_NOTE_LINE_KEY_1 PG_QMK_KEYPOS_HEX(1, 2)
-#define SINGLE_NOTE_LINE_KEY_2 PG_QMK_KEYPOS_HEX(1, 3)
-#define SINGLE_NOTE_LINE_KEY_3 PG_QMK_KEYPOS_HEX(1, 4)
+#define SINGLE_NOTE_LINE_KEY_1 PPG_QMK_KEYPOS_HEX(1, 2)
+#define SINGLE_NOTE_LINE_KEY_2 PPG_QMK_KEYPOS_HEX(1, 3)
+#define SINGLE_NOTE_LINE_KEY_3 PPG_QMK_KEYPOS_HEX(1, 4)
 
-#define PG_ABORT_KEY PG_QMK_KEYPOS_HEX(5, 6)
+#define PPG_ABORT_KEY PPG_QMK_KEYPOS_HEX(5, 6)
 
 void init_papageno(void)
 {
 	QMK_INIT_PAPAGENO
 	
-	pg_set_abort_key_id(PG_ABORT_KEY);
+	ppg_set_abort_key_id(PPG_ABORT_KEY);
 	
-	//pg_qmk_set_timeout_ms(20000);
-	pg_qmk_set_timeout_ms(500);
+	//ppg_qmk_set_timeout_ms(20000);
+	ppg_qmk_set_timeout_ms(500);
 	
 	/* Magic melodies are inherited by higher layers unless
 	 * overridden.
@@ -393,13 +393,13 @@ void init_papageno(void)
 	
 	/* Left inner large thumb key then right inner large thumb key
 	 */
-	pg_melody(
+	ppg_melody(
 		ff_layer_base,
 		2,
-		pg_create_note(Key_52),
-		pg_set_action(
-			pg_create_note(Key_5B),
-			PG_QMK_ACTION_KEYCODE(  
+		ppg_create_note(Key_52),
+		ppg_set_action(
+			ppg_create_note(Key_5B),
+			PPG_QMK_ACTION_KEYCODE(  
 				F(ff_a_melody_1)
 			)
 		)
@@ -407,25 +407,25 @@ void init_papageno(void)
 	
 	/* Left inner large thumb key then right inner large thumb key
 	 */
-	pg_melody(
+	ppg_melody(
 		ff_layer_base,
 		2, 
-		pg_create_note(Key_52),
-		pg_set_action(
-			pg_create_note(Key_5A),
-			PG_QMK_ACTION_KEYCODE(
+		ppg_create_note(Key_52),
+		ppg_set_action(
+			ppg_create_note(Key_5A),
+			PPG_QMK_ACTION_KEYCODE(
 				F(ff_a_melody_2)
 			)
 		)
 	);
 	
-	PG_Key_Id chord_keys[] 
+	PPG_Key_Id chord_keys[] 
 		= {	CHORD_KEY_1,
 				CHORD_KEY_2,
 				CHORD_KEY_3
 			};
 	
-	PG_Key_Id cluster_keys[] 
+	PPG_Key_Id cluster_keys[] 
 		= {	CLUSTER_KEY_1,
 				CLUSTER_KEY_2,
 				CLUSTER_KEY_3
@@ -434,19 +434,19 @@ void init_papageno(void)
 	/* First a chord of the s, d and f keys (QWERTY) then a cluster of
 	 * j, k and l (QWERTY).
 	 */
-	pg_melody(
+	ppg_melody(
 		ff_layer_base,
 		2,
-		pg_create_chord(
+		ppg_create_chord(
 			chord_keys,
-			PG_NUM_KEYS(chord_keys)
+			PPG_NUM_KEYS(chord_keys)
 		),
-		pg_set_action(
-			pg_create_cluster(
+		ppg_set_action(
+			ppg_create_cluster(
 				cluster_keys,
-				PG_NUM_KEYS(cluster_keys)
+				PPG_NUM_KEYS(cluster_keys)
 			),
-			PG_QMK_ACTION_KEYCODE(
+			PPG_QMK_ACTION_KEYCODE(
 				F(ff_a_chord_and_cluster)
 			)
 		)
@@ -454,9 +454,9 @@ void init_papageno(void)
 	
 	/* A single note line of w, e and r (QWERTY).
 	 */
-	pg_single_note_line(
+	ppg_single_note_line(
 		ff_layer_base,
-		PG_QMK_ACTION_KEYCODE(
+		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_note_line)
 		),
 		3,
@@ -468,9 +468,9 @@ void init_papageno(void)
 	/* Node lines can also contain the same key several times.
 	 * Here: w->w->e (QWERTY)
 	 */
-	pg_single_note_line(
+	ppg_single_note_line(
 		ff_layer_base,
-		PG_QMK_ACTION_KEYCODE(
+		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_note_line_double_key)
 		),
 		3,
@@ -481,62 +481,62 @@ void init_papageno(void)
 	
 	/* Triple tap on q (QWERTY)
 	 */
-	pg_tap_dance(
+	ppg_tap_dance(
 		ff_layer_base,
 		SINGLE_NOTE_LINE_KEY_1,
-		PG_Action_Noop_Fallthrough,
-							/* Use PG_Action_Noop_Fallthrough if you want fall through, 
+		PPG_Action_Noop_Fallthrough,
+							/* Use PPG_Action_Noop_Fallthrough if you want fall through, 
 								e.g. if something happens after three and five keypresses
 								and you want to fall through to the three keypress action
 								if only four keypresses arrived before timeout. */
-		PG_N_TAPS(1) /* one tap definition */,
+		PPG_N_TAPS(1) /* one tap definition */,
 		3,
-		PG_QMK_ACTION_KEYCODE(
+		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_tap_dance)
 		)
 	);
 	
 	/* Single chord of left thumb inner large key, right thumb both large keys
 	 */
-	PG_Key_Id single_chord_keys[] 
+	PPG_Key_Id single_chord_keys[] 
 		= {	Key_52,
 				Key_5B,
 				Key_5A
 			};
-	pg_chord(
+	ppg_chord(
 		ff_layer_aux,
-		PG_QMK_ACTION_KEYCODE(
+		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_chord)
 		),
 		single_chord_keys,
-		PG_NUM_KEYS(single_chord_keys)
+		PPG_NUM_KEYS(single_chord_keys)
 	);
 	
 	/* A single cluster of j, k and l (QWERTY).
 	 */
-	pg_cluster(
+	ppg_cluster(
 		ff_layer_aux,
-		PG_ACTION_USER_CALLBACK(
+		PPG_ACTION_USER_CALLBACK(
 			the_cluster_callback,
 			(void*)(size_t)13 /*user data*/
 		),
 		cluster_keys,
-		PG_NUM_KEYS(cluster_keys)
+		PPG_NUM_KEYS(cluster_keys)
 	);
 	
-   #define FF_BACK_LINE_1 PG_QMK_KEYPOS_HEX(4, 2)
-   #define FF_BACK_LINE_2 PG_QMK_KEYPOS_HEX(4, 3)
-   #define FF_BACK_LINE_3 PG_QMK_KEYPOS_HEX(4, 4)
-   #define FF_BACK_LINE_4 PG_QMK_KEYPOS_HEX(4, 9)
-   #define FF_BACK_LINE_5 PG_QMK_KEYPOS_HEX(4, A)
-   #define FF_BACK_LINE_6 PG_QMK_KEYPOS_HEX(4, B)
+   #define FF_BACK_LINE_1 PPG_QMK_KEYPOS_HEX(4, 2)
+   #define FF_BACK_LINE_2 PPG_QMK_KEYPOS_HEX(4, 3)
+   #define FF_BACK_LINE_3 PPG_QMK_KEYPOS_HEX(4, 4)
+   #define FF_BACK_LINE_4 PPG_QMK_KEYPOS_HEX(4, 9)
+   #define FF_BACK_LINE_5 PPG_QMK_KEYPOS_HEX(4, A)
+   #define FF_BACK_LINE_6 PPG_QMK_KEYPOS_HEX(4, B)
 	
 	/* A magic melody to switch to the aux layer.
 	 */
-	pg_single_note_line(
+	ppg_single_note_line(
 
 		ff_layer_base,
-		PG_QMK_ACTION_KEYCODE(
+		PPG_QMK_ACTION_KEYCODE(
 			TG(ff_layer_aux)
 		),
 		6,
@@ -592,5 +592,5 @@ void matrix_scan_user(void) {
             break;
     }
     
-    pg_check_timeout();
+    ppg_check_timeout();
 };

@@ -101,9 +101,8 @@ endif
 ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     OPT_DEFS += -DPAPAGENO_ENABLE
     EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno
-    #OPT_DEFS += -I$(QUANTUM_DIR)/../libs/papageno
     SRC += $(QUANTUM_DIR)/../lib/papageno/papageno.c
-    SRC += $(QUANTUM_DIR)/../lib/papageno/papageno_qmk.c
+    SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c
 endif
 
 
