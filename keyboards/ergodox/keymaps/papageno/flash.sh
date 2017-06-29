@@ -1,3 +1,3 @@
 #!/bin/bash
 
-make keyboard=ergodox keymap=papageno dfu
+make keyboard=ergodox keymap=papageno teensy

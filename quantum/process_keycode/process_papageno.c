@@ -14,9 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "papageno.h"
-#include "quantum.h"
-#include "tmk_core/common/keyboard.h"
+#include "process_papageno.h"
 
 #ifdef DEBUG_PAPAGENO
 #include "debug.h"
@@ -32,12 +30,32 @@
  */
 action_t action_for_configured_keycode(uint16_t keycode);
 
+inline
+static uint16_t ppg_qmk_get_event_state(PPG_Key_State *state)
+{
+	return *(uint16_t*)&state;
+}
+
+inline 
+static void ppg_qmk_set_event_state(PPG_Key_State *target,
+												uint16_t source)
+{
+	*(uint16_t*)target = source;
+}
+
+inline 
+static PPG_Key_State ppg_qmk_to_event_state(uint16_t source)
+{
+	return *(PPG_Key_State*)&source;
+}
+
 typedef struct {
 	uint16_t time_offset;
 } PPG_QMK_Keycode_Data;
 
-bool ppg_qmk_process_key_event_callback(	PPG_Key_Event *key_event,
-										uint8_t state_flag, 
+bool ppg_qmk_process_key_event_callback(	
+										PPG_Key_Event *key_event,
+										uint8_t slot_id, 
 										void *user_data)
 {
 	PPG_QMK_Keycode_Data *kd = (PPG_QMK_Keycode_Data *)user_data;
@@ -46,18 +64,17 @@ bool ppg_qmk_process_key_event_callback(	PPG_Key_Event *key_event,
 		kd->time_offset = timer_read() - (uint16_t)key_event->time;
 	};
 	
-	/* keypos_t and key_id are assumed to be 16 bit */
-	keypos_t keypos = *((keypos_t*)&key_event->key_id);
+	PPG_QMK_Key_Data *key_data = (PPG_QMK_Key_Data *)key_event->key_id;
 	
 	keyrecord_t record = {
 		.event = {
 			.time = (uint16_t)key_event->time + kd->time_offset,
-			.key = keypos,
-			.pressed = key_event->pressed
+			.key = key_data->keypos,
+			.pressed = (ppg_qmk_get_event_state(key_event->state) == PPG_QMK_Key_Pressed) ? true : false
 		}
 	};
 		
-	PPG_PRINTF("Issuing keystroke at %d, %d\n", record.event.key.row, record.event.key.col);
+	PPG_PRINTF("Issuing keystroke at %u, %u\n", record.event.key.row, record.event.key.col);
 		
 	process_record_quantum(&record);
 	
@@ -71,7 +88,7 @@ void ppg_qmk_flush_key_events(void)
 	};
 	
 	ppg_flush_stored_key_events(
-		PPG_Key_Flush_User,
+		PPG_On_User,
 		ppg_qmk_process_key_event_callback,
 		(void*)&kd
 	);
@@ -103,6 +120,8 @@ void ppg_qmk_process_keycode(void *user_data) {
 		
 		uint16_t configured_keycode = keycode_config(keycode);
 		
+		PPG_PRINTF("Passing keycode %d to qmk system\n");
+		
 		action_t action = action_for_configured_keycode(configured_keycode); 
 	
 		process_action(&record, action);
@@ -118,10 +137,17 @@ bool ppg_qmk_process_key_event(
 				uint16_t keycode, 
 				keyrecord_t *record)
 {
+	PPG_QMK_Key_Data key_data = {
+		.keypos = record->event.key,
+		.keycode = keycode
+	};
+	
 	PPG_Key_Event key_event = {
-		.key_id = *((PPG_Key_Id*)&record->event.key),
+		.key_id = &key_data,
 		.time = (PPG_Time)record->event.time,
-		.pressed = record->event.pressed
+		.state = ppg_qmk_to_event_state(
+				(record->event.pressed) ? PPG_QMK_Key_Pressed : PPG_QMK_Key_Released
+			)
 	};
 	
 	uint8_t cur_layer = biton32(layer_state);
@@ -130,7 +156,7 @@ bool ppg_qmk_process_key_event(
 							&key_event, cur_layer);
 }
 
-void  ppg_qmk_time(PPG_Time *time)
+void ppg_qmk_time(PPG_Time *time)
 {
 	uint16_t time_tmp = timer_read();
 	*time = *((PPG_Time*)&time_tmp);
@@ -162,3 +188,49 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout)
 	ppg_set_timeout((PPG_Time)timeout);
 }
 
+// uint16_t ppg_qmk_key_id_from_keypos(uint8_t row, uint8_t col)
+// {
+// 	uint16_t result = (*(uint16_t*)(&(keypos_t){ .row = row, .col = col}));
+// 		
+// // 	PPG_PRINTF("row = %u\n", row);
+// // 	PPG_PRINTF("col = %u\n", col);
+// // 	PPG_PRINTF("result = %u\n", result);
+// 	
+// 	return result;
+// }
+
+PPG_QMK_Key_Data *ppg_qmk_create_key_data(
+										keypos_t keypos,
+										uint16_t keycode)
+{
+	PPG_QMK_Key_Data *kd = (PPG_QMK_Key_Data*)malloc(sizeof(PPG_QMK_Key_Data));
+	
+	kd->keypos = keypos;
+	kd->keycode = keycode;
+	
+// 	PPG_PRINTF("kd->data == %u\n", kd->data);
+// 	PPG_PRINTF("kd->is_keycode == %d\n", kd->is_keycode);
+	
+	return kd;
+}
+
+bool ppg_qmk_check_key_active(PPG_Key_Id key_id,
+										PPG_Key_State state)
+{
+	return (ppg_qmk_get_event_state(state) == PPG_QMK_Key_Pressed);
+}
+
+bool ppg_qmk_key_id_equal(PPG_Key_Id key_id1, PPG_Key_Id key_id2)
+{
+	PPG_QMK_Key_Data *kd1 = (PPG_QMK_Key_Data *)key_id1;
+	PPG_QMK_Key_Data *kd2 = (PPG_QMK_Key_Data *)key_id2;
+	
+// 	PPG_PRINTF("kd1->data == %u\n", kd1->data);
+// 	PPG_PRINTF("kd2->data == %u\n", kd2->data);
+// 	PPG_PRINTF("kd1->is_keycode == %d\n", kd1->is_keycode);
+// 	PPG_PRINTF("kd2->is_keycode == %d\n", kd2->is_keycode);
+	
+	return 	(kd1->keycode == kd2->keycode)
+			||	(		(kd1->keypos.row == kd2->keypos.row)
+					&&	(kd1->keypos.col == kd2->keypos.col));
+}
