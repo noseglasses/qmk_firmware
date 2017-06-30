@@ -49,56 +49,48 @@ static PPG_Key_State ppg_qmk_to_event_state(uint16_t source)
 	return *(PPG_Key_State*)&source;
 }
 
-typedef struct {
-	uint16_t time_offset;
-} PPG_QMK_Keycode_Data;
-
 bool ppg_qmk_process_key_event_callback(	
 										PPG_Key_Event *key_event,
 										uint8_t slot_id, 
 										void *user_data)
 {
-	PPG_QMK_Keycode_Data *kd = (PPG_QMK_Keycode_Data *)user_data;
-	
-	if(kd->time_offset == 0) {
-		kd->time_offset = timer_read() - (uint16_t)key_event->time;
-	};
-	
 	PPG_QMK_Key_Data *key_data = (PPG_QMK_Key_Data *)key_event->key_id;
 	
-	keyrecord_t record = {
-		.event = {
-			.time = (uint16_t)key_event->time + kd->time_offset,
-			.key = key_data->keypos,
-			.pressed = (ppg_qmk_get_event_state(key_event->state) == PPG_QMK_Key_Pressed) ? true : false
-		}
-	};
-		
-	PPG_PRINTF("Issuing keystroke at %u, %u\n", record.event.key.row, record.event.key.col);
-		
-	process_record_quantum(&record);
+	bool pressed 
+		= (ppg_qmk_get_event_state(key_event->state) == PPG_QMK_Key_Pressed)
+					? true : false;
+				
+	PPG_PRINTF("Issuing keycode %u, pressed = %u\n", key_data->keycode, pressed);
+	
+	if(pressed) {
+		register_code16(key_data->keycode);
+	}
+	else {
+		unregister_code16(key_data->keycode);
+	}
 	
 	return true;
 }
 
 void ppg_qmk_flush_key_events(void)
-{
-	PPG_QMK_Keycode_Data kd = {
-		.time_offset = 0
-	};
-	
+{	
 	ppg_flush_stored_key_events(
 		PPG_On_User,
 		ppg_qmk_process_key_event_callback,
-		(void*)&kd
+		NULL
 	);
 }
 
-void ppg_qmk_process_keycode(void *user_data) {
+void ppg_qmk_process_keycode(uint8_t slot_id, void *user_data) {
 	
 	uint16_t keycode = (uint16_t)user_data;
 	
 	if(keycode != 0) {
+		
+// 		PPG_PRINTF("Passing keycode %u to qmk system\n", keycode);
+// 		
+// 		register_code(keycode);
+// 		unregister_code(keycode);
 		
 		/* Construct a dummy record
 		*/
@@ -120,7 +112,7 @@ void ppg_qmk_process_keycode(void *user_data) {
 		
 		uint16_t configured_keycode = keycode_config(keycode);
 		
-		PPG_PRINTF("Passing keycode %d to qmk system\n");
+// 		PPG_PRINTF("Passing keycode %u to qmk system\n", configured_keycode);
 		
 		action_t action = action_for_configured_keycode(configured_keycode); 
 	
@@ -230,7 +222,8 @@ bool ppg_qmk_key_id_equal(PPG_Key_Id key_id1, PPG_Key_Id key_id2)
 // 	PPG_PRINTF("kd1->is_keycode == %d\n", kd1->is_keycode);
 // 	PPG_PRINTF("kd2->is_keycode == %d\n", kd2->is_keycode);
 	
-	return 	(kd1->keycode == kd2->keycode)
-			||	(		(kd1->keypos.row == kd2->keypos.row)
-					&&	(kd1->keypos.col == kd2->keypos.col));
+	return 	((kd1->keycode == kd2->keycode) && (kd1->keycode != 0))
+			||	(		((kd1->keypos.row == kd2->keypos.row) && (kd1->keypos.row != 0))
+					&&	((kd1->keypos.col == kd2->keypos.col) && (kd1->keypos.col != 0))
+				);
 }

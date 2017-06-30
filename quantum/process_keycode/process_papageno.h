@@ -47,6 +47,7 @@ bool ppg_qmk_process_key_event_callback(
 void ppg_qmk_flush_key_events(void);
 
 void ppg_qmk_process_keycode(
+								uint8_t slot_id, 
 								void *user_data);
 
 bool ppg_qmk_process_key_event(
@@ -110,10 +111,10 @@ uint16_t ppg_qmk_key_id_from_keypos(uint8_t row, uint8_t col);
 
 #define PPG_QMK_ACTION_KEYCODE(KK) \
 	(PPG_Action) {	\
-		.flags = PPG_Action_Undefined, \
+		.flags = PPG_Action_Default, \
 		.user_callback = (PPG_User_Callback) { \
 			.func = (PPG_User_Callback_Fun)ppg_qmk_process_keycode,  \
-			.user_data = (void*)KK \
+			.user_data = (void*)(uint16_t)KK \
 		} \
 	}
 

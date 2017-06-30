@@ -382,24 +382,27 @@ void init_papageno(void)
 	
 	ppg_set_abort_key(PPG_ABORT_KEY);
 	
-	//ppg_qmk_set_timeout_ms(20000);
-	ppg_qmk_set_timeout_ms(500);
+	ppg_qmk_set_timeout_ms(20000);
+// 	ppg_qmk_set_timeout_ms(500);
 	
 	/* Magic melodies are inherited by higher layers unless
 	 * overridden.
 	 */ 
 	
+	PPG_PRINTF("Keycode is %u\n", F(ff_a_melody_1));
+	
 	/* Single note line magic melody: Left inner large thumb key followed by
 	 * right inner large thumb key
 	 */
 	ppg_melody(
 		ff_layer_base, /* Layer id */
-		2, /* Two phrases follow */
-		ppg_create_note(KEY_52),
-		ppg_phrase_set_action(
-			ppg_create_note(KEY_5B),
-			PPG_QMK_ACTION_KEYCODE(  
-				F(ff_a_melody_1)
+		PPG_PHRASES(
+			ppg_create_note(KEY_52),
+			ppg_phrase_set_action(
+				ppg_create_note(KEY_5B),
+				PPG_QMK_ACTION_KEYCODE(  
+					F(ff_a_melody_1)
+				)
 			)
 		)
 	);
@@ -409,55 +412,37 @@ void init_papageno(void)
 	 */
 	ppg_melody(
 		ff_layer_base, /* Layer id */
-		2, /* Two phrases follow */
-		ppg_create_note(KEY_52),
-		ppg_phrase_set_action(
-			ppg_create_note(KEY_5A),
-			PPG_QMK_ACTION_KEYCODE(
-				F(ff_a_melody_2)
+		PPG_PHRASES(
+			ppg_create_note(KEY_52),
+			ppg_phrase_set_action(
+				ppg_create_note(KEY_5A),
+				PPG_QMK_ACTION_KEYCODE(
+					F(ff_a_melody_2)
+				)
 			)
 		)
 	);
-	
-// 	PPG_Key chord_keys[] 
-// 		= {	CHORD_KEY_1,
-// 				CHORD_KEY_2,
-// 				CHORD_KEY_3
-// 			};
-// 	
-// 	PPG_Key cluster_keys[] 
-// 		= {	CLUSTER_KEY_1,
-// 				CLUSTER_KEY_2,
-// 				CLUSTER_KEY_3
-// 			};
 			
 	/* Melody specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
 	 * j, k and l (QWERTY).
 	 */
 	ppg_melody(
 		ff_layer_base, /* Layer id */
-		2, /* Two phrases follow */
-// 		ppg_create_chord(
-// 			PPG_NUM_KEYS(chord_keys),
-// 			chord_keys
-// 		),
-		PPG_CREATE_CHORD(
-			CHORD_KEY_1,
-			CHORD_KEY_2,
-			CHORD_KEY_3
-		),
-		ppg_phrase_set_action(
-// 			ppg_create_cluster(
-// 				cluster_keys,
-// 				PPG_NUM_KEYS(cluster_keys)
-// 			),
-			PPG_CREATE_CLUSTER(
-				CLUSTER_KEY_1,
-				CLUSTER_KEY_2,
-				CLUSTER_KEY_3
+		PPG_PHRASES(
+			PPG_CREATE_CHORD(
+				CHORD_KEY_1,
+				CHORD_KEY_2,
+				CHORD_KEY_3
 			),
-			PPG_QMK_ACTION_KEYCODE(
-				F(ff_a_chord_and_cluster)
+			ppg_phrase_set_action(
+				PPG_CREATE_CLUSTER(
+					CLUSTER_KEY_1,
+					CLUSTER_KEY_2,
+					CLUSTER_KEY_3
+				),
+				PPG_QMK_ACTION_KEYCODE(
+					F(ff_a_chord_and_cluster)
+				)
 			)
 		)
 	);
@@ -469,10 +454,11 @@ void init_papageno(void)
 		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_note_line)
 		),
-		3, /* Three key definitions follow as variadic function args */
-		SINGLE_NOTE_LINE_KEY_1,
-		SINGLE_NOTE_LINE_KEY_2,
-		SINGLE_NOTE_LINE_KEY_3
+		PPG_KEYS(
+			SINGLE_NOTE_LINE_KEY_1,
+			SINGLE_NOTE_LINE_KEY_2,
+			SINGLE_NOTE_LINE_KEY_3
+		)
 	);
 
 	/* Node lines can also contain the same key several times.
@@ -483,10 +469,11 @@ void init_papageno(void)
 		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_note_line_double_key)
 		),
-		3, /* Three key definitions follow as variadic function args */
-		SINGLE_NOTE_LINE_KEY_1,
-		SINGLE_NOTE_LINE_KEY_1,
-		SINGLE_NOTE_LINE_KEY_2
+		PPG_KEYS(
+			SINGLE_NOTE_LINE_KEY_1,
+			SINGLE_NOTE_LINE_KEY_1,
+			SINGLE_NOTE_LINE_KEY_2
+		)
 	);
 	
 	/* Triple tap on q (QWERTY)
@@ -499,32 +486,27 @@ void init_papageno(void)
 								e.g. if something happens after three and five keypresses
 								and you want to fall back to the three keypress action
 								if only four keypresses arrived before timeout. */
-		PPG_N_TAPS(1), /* one tap definition pair follows */
-		3, /* The following action applies after three taps */
-		PPG_QMK_ACTION_KEYCODE(
-			F(ff_a_tap_dance)
+		PPG_TAP_DEFINITIONS(
+			PPG_TAP(3, 
+					  PPG_QMK_ACTION_KEYCODE(
+						  F(ff_a_tap_dance)
+					  )
+			)
 		)
 	);
 	
 	/* Single chord of left thumb inner large key, right thumb both large keys
 	 */
-// 	PPG_Key single_chord_keys[] 
-// 		= {	KEY_52,
-// 				KEY_5B,
-// 				KEY_5A
-// 			};
 	ppg_chord(
 		ff_layer_qwerty,
 		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_chord)
 		),
-		PPG_KEY_ARRAY(
+		PPG_KEYS(
 			KEY_52,
 			KEY_5B,
 			KEY_5A
 		)
-// 		single_chord_keys,
-// 		PPG_NUM_KEYS(single_chord_keys)
 	);
 	
 	/* A single cluster of j, k and l (QWERTY).
@@ -535,7 +517,7 @@ void init_papageno(void)
 			the_cluster_callback,
 			(void*)(size_t)13 /*user data*/
 		),
-		PPG_KEY_ARRAY(
+		PPG_KEYS(
 			CLUSTER_KEY_1,
 			CLUSTER_KEY_2,
 			CLUSTER_KEY_3
@@ -551,20 +533,20 @@ void init_papageno(void)
 	
 	/* A magic melody to switch to the aux layer.
 	 */
-// 	ppg_single_note_line(
-// 
-// 		ff_layer_base,
-// 		PPG_QMK_ACTION_KEYCODE(
-// 			TG(ff_layer_qwerty)
-// 		),
-// 		6,
-// 		FF_BACK_LINE_1,
-// 		FF_BACK_LINE_2,
-// 		FF_BACK_LINE_3,
-// 		FF_BACK_LINE_4,
-// 		FF_BACK_LINE_5,
-// 		FF_BACK_LINE_6
-// 	);
+	ppg_single_note_line(
+		ff_layer_base,
+		PPG_QMK_ACTION_KEYCODE(
+			TG(ff_layer_qwerty)
+		),
+			PPG_KEYS(
+				FF_BACK_LINE_1,
+				FF_BACK_LINE_2,
+				FF_BACK_LINE_3,
+				FF_BACK_LINE_4,
+				FF_BACK_LINE_5,
+				FF_BACK_LINE_6
+			)
+	);
 
 	PPG_PRINTF("Setup completed\n");
 }
@@ -575,6 +557,8 @@ void matrix_init_user(void) {
 
 void matrix_scan_user(void) {
 	 
+// 	PPG_PRINTF("Matrix scan user\n");
+	
     uint8_t layer = biton32(layer_state);
 
     ergodox_board_led_off();
