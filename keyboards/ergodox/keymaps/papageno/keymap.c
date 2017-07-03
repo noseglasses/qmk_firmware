@@ -45,10 +45,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	 */
   [ff_layer_norman] = KEYMAP(
       
-      KC_GRAVE   ,KC_1       ,KC_2       ,KC_3       ,KC_4       ,KC_5       ,LCTL(KC_X),
-      KC_EQUAL   ,KC_Q       ,KC_W       ,KC_D       ,KC_F       ,KC_K       ,LCTL(KC_C),
+      KC_GRAVE   ,KC_1       ,KC_2       ,KC_3       ,KC_4       ,KC_5       ,LCTL(KC_X) ,
+      KC_EQUAL   ,KC_Q       ,KC_W       ,KC_D       ,KC_F       ,KC_K       ,LCTL(KC_C) ,
       KC_DELETE  ,KC_A       ,ALT_T(KC_S),CTL_T(KC_E),SFT_T(KC_T),LT(1,KC_G) ,
-      MO(1)      ,KC_Z       ,KC_X       ,KC_C       ,ALGR_T(KC_V),KC_B,LCTL(KC_V)      ,
+      MO(1)      ,KC_Z       ,KC_X       ,KC_C       ,ALGR_T(KC_V),KC_B      ,LCTL(KC_V) ,
       TG(1)      ,RESET      ,KC_WWW_FORWARD,KC_LEFT ,KC_RIGHT,
                                                                               KC_F1      ,KC_F3      ,
                                                                                           KC_HOME    ,
