@@ -114,9 +114,12 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_token_detail.c                                                                                                           
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_input_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_note_detail.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_global_detail.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_event_buffer_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_input.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_chord.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_time.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_timeout.c
 endif
 
 
