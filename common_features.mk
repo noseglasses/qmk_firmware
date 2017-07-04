@@ -100,9 +100,23 @@ endif
 
 ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     OPT_DEFS += -DPAPAGENO_ENABLE
-    EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno
-    SRC += $(QUANTUM_DIR)/../lib/papageno/papageno.c
+    EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/src
     SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_note.c                                                                                                                          
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_context.c                                                                                                                       
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_global.c                                                                                                                          
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_tap_dance.c                                                                                                                     
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_cluster.c                                                                                                                       
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_pattern.c                                                                                                                       
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_aggregate_detail.c                                                                                                       
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_context_detail.c                                                                                                         
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_pattern_detail.c                                                                                                         
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_token_detail.c                                                                                                           
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_input_detail.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_note_detail.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_input.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_chord.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_time.c
 endif
 
 

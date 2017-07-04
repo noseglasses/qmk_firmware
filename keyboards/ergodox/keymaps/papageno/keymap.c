@@ -11,13 +11,6 @@
 
 #include "process_papageno.h"
 
-#ifdef DEBUG_PAPAGENO
-#include "debug.h"
-#define PPG_PRINTF(...) uprintf(__VA_ARGS__)
-#else
-#define PPG_PRINTF(...)
-#endif
-
 enum custom_keycodes {
   PLACEHOLDER = SAFE_RANGE, // can always be here
   EPRM,
@@ -302,7 +295,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // 	PPG_PRINTF("   row: %d\n", record->event.key.row);
 // 	PPG_PRINTF("   col: %d\n", record->event.key.col);is
 	
-	bool ppg_process_result = ppg_qmk_process_key_event(keycode,record );
+	bool ppg_process_result = ppg_qmk_process_event(keycode, record);
 	
 	if(!ppg_process_result) { return false; }
 	
@@ -380,7 +373,7 @@ void init_papageno(void)
 {
 	PPG_QMK_INIT
 	
-	ppg_set_abort_key(PPG_ABORT_KEY);
+	ppg_set_abort_input(PPG_ABORT_KEY);
 	
 	ppg_qmk_set_timeout_ms(20000);
 // 	ppg_qmk_set_timeout_ms(500);
@@ -394,11 +387,11 @@ void init_papageno(void)
 	/* Single note line magic melody: Left inner large thumb key followed by
 	 * right inner large thumb key
 	 */
-	ppg_melody(
+	ppg_pattern(
 		ff_layer_base, /* Layer id */
-		PPG_PHRASES(
+		PPG_TOKENS(
 			ppg_create_note(KEY_52),
-			ppg_phrase_set_action(
+			ppg_token_set_action(
 				ppg_create_note(KEY_5B),
 				PPG_QMK_ACTION_KEYCODE(  
 					F(ff_a_melody_1)
@@ -410,11 +403,11 @@ void init_papageno(void)
 	/* Single note line magic melody: Left inner large thumb key followed by
 	 * right inner large thumb key
 	 */
-	ppg_melody(
+	ppg_pattern(
 		ff_layer_base, /* Layer id */
-		PPG_PHRASES(
+		PPG_TOKENS(
 			ppg_create_note(KEY_52),
-			ppg_phrase_set_action(
+			ppg_token_set_action(
 				ppg_create_note(KEY_5A),
 				PPG_QMK_ACTION_KEYCODE(
 					F(ff_a_melody_2)
@@ -426,15 +419,15 @@ void init_papageno(void)
 	/* Melody specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
 	 * j, k and l (QWERTY).
 	 */
-	ppg_melody(
+	ppg_pattern(
 		ff_layer_base, /* Layer id */
-		PPG_PHRASES(
+		PPG_TOKENS(
 			PPG_CREATE_CHORD(
 				CHORD_KEY_1,
 				CHORD_KEY_2,
 				CHORD_KEY_3
 			),
-			ppg_phrase_set_action(
+			ppg_token_set_action(
 				PPG_CREATE_CLUSTER(
 					CLUSTER_KEY_1,
 					CLUSTER_KEY_2,
@@ -454,7 +447,7 @@ void init_papageno(void)
 		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_note_line)
 		),
-		PPG_KEYS(
+		PPG_QMK_KEYS(
 			SINGLE_NOTE_LINE_KEY_1,
 			SINGLE_NOTE_LINE_KEY_2,
 			SINGLE_NOTE_LINE_KEY_3
@@ -469,7 +462,7 @@ void init_papageno(void)
 		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_note_line_double_key)
 		),
-		PPG_KEYS(
+		PPG_QMK_KEYS(
 			SINGLE_NOTE_LINE_KEY_1,
 			SINGLE_NOTE_LINE_KEY_1,
 			SINGLE_NOTE_LINE_KEY_2
@@ -502,7 +495,7 @@ void init_papageno(void)
 		PPG_QMK_ACTION_KEYCODE(
 			F(ff_a_single_chord)
 		),
-		PPG_KEYS(
+		PPG_QMK_KEYS(
 			KEY_52,
 			KEY_5B,
 			KEY_5A
@@ -517,7 +510,7 @@ void init_papageno(void)
 			the_cluster_callback,
 			(void*)(size_t)13 /*user data*/
 		),
-		PPG_KEYS(
+		PPG_QMK_KEYS(
 			CLUSTER_KEY_1,
 			CLUSTER_KEY_2,
 			CLUSTER_KEY_3
@@ -538,7 +531,7 @@ void init_papageno(void)
 		PPG_QMK_ACTION_KEYCODE(
 			TG(ff_layer_qwerty)
 		),
-			PPG_KEYS(
+			PPG_QMK_KEYS(
 				FF_BACK_LINE_1,
 				FF_BACK_LINE_2,
 				FF_BACK_LINE_3,

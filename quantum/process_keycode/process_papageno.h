@@ -39,8 +39,8 @@
 #include "quantum.h"
 #include "tmk_core/common/keyboard.h"
 
-bool ppg_qmk_process_key_event_callback(	
-								PPG_Key_Event *key_event,
+bool ppg_qmk_process_event_callback(	
+								PPG_Event *key_event,
 								uint8_t slot_id, 
 								void *user_data);
 
@@ -50,7 +50,7 @@ void ppg_qmk_process_keycode(
 								uint8_t slot_id, 
 								void *user_data);
 
-bool ppg_qmk_process_key_event(
+bool ppg_qmk_process_event(
 								uint16_t keycode, 
 								keyrecord_t *record);
 
@@ -86,27 +86,27 @@ enum PPG_QMK_Key_State {
 	PPG_QMK_Key_Pressed
 };
 
-bool ppg_qmk_check_key_active(PPG_Key_Id key_id,
-										PPG_Key_State state);
+bool ppg_qmk_check_key_active(PPG_Input_Id input_id,
+										PPG_Input_State state);
 
 
-bool ppg_qmk_key_id_equal(PPG_Key_Id key_id1, PPG_Key_Id key_id2);
+bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2);
 
-uint16_t ppg_qmk_key_id_from_keypos(uint8_t row, uint8_t col);
+uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
 
 #define PPG_QMK_KEYPOS_HEX(COL, ROW) \
 	(keypos_t){ .row = 0x##ROW, .col = 0x##COL }
 
 #define PPG_QMK_MATRIX_KEY_HEX(COL, ROW) \
-	(PPG_Key) { \
-		.key_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(COL, ROW), 0), \
-		.check_active = (PPG_Key_Activation_Check_Fun)ppg_qmk_check_key_active \
+	(PPG_Input) { \
+		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(COL, ROW), 0), \
+		.check_active = (PPG_Input_Active_Check_Fun)ppg_qmk_check_key_active \
 	}
 	
 #define PPG_QMK_KEYCODE_KEY(KK) \
-	(PPG_Key) { \
-		.key_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(0, 0), KK), \
-		.check_active = (PPG_Key_Activation_Check_Fun)ppg_qmk_check_key_active, \
+	(PPG_Input) { \
+		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(0, 0), KK), \
+		.check_active = (PPG_Input_Activation_Check_Fun)ppg_qmk_check_key_active, \
 	}	
 
 #define PPG_QMK_ACTION_KEYCODE(KK) \
@@ -122,11 +122,13 @@ uint16_t ppg_qmk_key_id_from_keypos(uint8_t row, uint8_t col);
 	\
 	ppg_init(); \
 	\
-	ppg_set_default_key_processor((PPG_Key_Event_Processor_Fun)ppg_qmk_process_key_event_callback); \
+	ppg_set_default_input_processor((PPG_Event_Processor_Fun)ppg_qmk_process_event_callback); \
 	\
 	ppg_set_time_function((PPG_Time_Fun)ppg_qmk_time); \
 	ppg_set_time_difference_function((PPG_Time_Difference_Fun)ppg_qmk_time_difference); \
 	ppg_set_time_comparison_function((PPG_Time_Comparison_Fun)ppg_qmk_time_comparison); \
-	ppg_set_key_id_equal_function((PPG_Key_Id_Equal_Fun)ppg_qmk_key_id_equal); 
+	ppg_set_input_id_equal_function((PPG_Input_Id_Equal_Fun)ppg_qmk_input_id_equal); 
+	
+#define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
 
 #endif
