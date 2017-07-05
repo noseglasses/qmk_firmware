@@ -102,7 +102,8 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     OPT_DEFS += -DPAPAGENO_ENABLE
     EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/src
     SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c
-    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_note.c                                                                                                                          
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_note.c     
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_event.c                                                                                                                          
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_context.c                                                                                                                       
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_global.c                                                                                                                          
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_tap_dance.c                                                                                                                     
@@ -116,6 +117,7 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_note_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_global_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_event_buffer_detail.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_furcation_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_input.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_chord.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_time.c

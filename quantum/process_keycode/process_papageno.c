@@ -64,7 +64,7 @@ bool ppg_qmk_process_event_callback(
 
 void ppg_qmk_flush_events(void)
 {	
-	ppg_flush_stored_events(
+	ppg_event_buffer_flush(
 		PPG_On_User,
 		ppg_qmk_process_event_callback,
 		NULL
@@ -134,8 +134,10 @@ bool ppg_qmk_process_event(
 	
 	uint8_t cur_layer = biton32(layer_state);
 	
-	return ppg_process_event(
-							&event, cur_layer);
+	ppg_global_set_layer(cur_layer);
+	
+	return ppg_event_process(
+							&event);
 }
 
 void ppg_qmk_time(PPG_Time *time)
@@ -167,7 +169,7 @@ int8_t ppg_qmk_time_comparison(
 
 void ppg_qmk_set_timeout_ms(uint16_t timeout)
 {
-	ppg_set_timeout((PPG_Time)timeout);
+	ppg_global_set_timeout((PPG_Time)timeout);
 }
 
 // uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col)

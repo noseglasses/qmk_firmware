@@ -120,14 +120,14 @@ uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
 
 #define PPG_QMK_INIT \
 	\
-	ppg_init(); \
+	ppg_global_init(); \
 	\
-	ppg_set_default_input_processor((PPG_Event_Processor_Fun)ppg_qmk_process_event_callback); \
+	ppg_global_set_default_event_processor((PPG_Event_Processor_Fun)ppg_qmk_process_event_callback); \
 	\
-	ppg_set_time_function((PPG_Time_Fun)ppg_qmk_time); \
-	ppg_set_time_difference_function((PPG_Time_Difference_Fun)ppg_qmk_time_difference); \
-	ppg_set_time_comparison_function((PPG_Time_Comparison_Fun)ppg_qmk_time_comparison); \
-	ppg_set_input_id_equal_function((PPG_Input_Id_Equal_Fun)ppg_qmk_input_id_equal); 
+	ppg_global_set_time_function((PPG_Time_Fun)ppg_qmk_time); \
+	ppg_global_set_time_difference_function((PPG_Time_Difference_Fun)ppg_qmk_time_difference); \
+	ppg_global_set_time_comparison_function((PPG_Time_Comparison_Fun)ppg_qmk_time_comparison); \
+	ppg_global_set_input_id_equal_function((PPG_Input_Id_Equal_Fun)ppg_qmk_input_id_equal); 
 	
 #define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
 

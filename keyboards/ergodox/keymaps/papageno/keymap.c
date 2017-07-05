@@ -373,7 +373,7 @@ void init_papageno(void)
 {
 	PPG_QMK_INIT
 	
-	ppg_set_abort_input(PPG_ABORT_KEY);
+	ppg_global_set_abort_trigger(PPG_ABORT_KEY);
 	
 	ppg_qmk_set_timeout_ms(20000);
 // 	ppg_qmk_set_timeout_ms(500);
@@ -390,9 +390,9 @@ void init_papageno(void)
 	ppg_pattern(
 		ff_layer_base, /* Layer id */
 		PPG_TOKENS(
-			ppg_create_note(KEY_52),
+			ppg_note_create(KEY_52),
 			ppg_token_set_action(
-				ppg_create_note(KEY_5B),
+				ppg_note_create(KEY_5B),
 				PPG_QMK_ACTION_KEYCODE(  
 					F(ff_a_melody_1)
 				)
@@ -406,9 +406,9 @@ void init_papageno(void)
 	ppg_pattern(
 		ff_layer_base, /* Layer id */
 		PPG_TOKENS(
-			ppg_create_note(KEY_52),
+			ppg_note_create(KEY_52),
 			ppg_token_set_action(
-				ppg_create_note(KEY_5A),
+				ppg_note_create(KEY_5A),
 				PPG_QMK_ACTION_KEYCODE(
 					F(ff_a_melody_2)
 				)
@@ -422,13 +422,13 @@ void init_papageno(void)
 	ppg_pattern(
 		ff_layer_base, /* Layer id */
 		PPG_TOKENS(
-			PPG_CREATE_CHORD(
+			PPG_CHORD_CREATE(
 				CHORD_KEY_1,
 				CHORD_KEY_2,
 				CHORD_KEY_3
 			),
 			ppg_token_set_action(
-				PPG_CREATE_CLUSTER(
+				PPG_CLUSTER_CREATE(
 					CLUSTER_KEY_1,
 					CLUSTER_KEY_2,
 					CLUSTER_KEY_3
@@ -540,6 +540,8 @@ void init_papageno(void)
 				FF_BACK_LINE_6
 			)
 	);
+	
+	ppg_global_compile();
 
 	PPG_PRINTF("Setup completed\n");
 }
@@ -589,5 +591,5 @@ void matrix_scan_user(void) {
             break;
     }
     
-    ppg_check_timeout();
+    ppg_timeout_check();
 };
