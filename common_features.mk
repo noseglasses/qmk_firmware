@@ -122,6 +122,7 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_chord.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_time.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_timeout.c
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_bitfield.c
 endif
 
 
