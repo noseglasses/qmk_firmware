@@ -211,8 +211,8 @@ void ff_led_superflash(void)
 }
 
 enum {
-	ff_a_melody_1 = 2,
-	ff_a_melody_2,
+	ff_a_pattern_1 = 2,
+	ff_a_pattern_2,
 	ff_a_chord_and_cluster,
 	ff_a_single_note_line,
 	ff_a_single_note_line_double_key,
@@ -227,8 +227,8 @@ const uint16_t PROGMEM fn_actions[] = {
 	
   [1] = ACTION_LAYER_TAP_TOGGLE(1),
   
-  FF_ADD_ACTION_FUNC(ff_a_melody_1),
-  FF_ADD_ACTION_FUNC(ff_a_melody_2),
+  FF_ADD_ACTION_FUNC(ff_a_pattern_1),
+  FF_ADD_ACTION_FUNC(ff_a_pattern_2),
   FF_ADD_ACTION_FUNC(ff_a_chord_and_cluster),
   FF_ADD_ACTION_FUNC(ff_a_single_note_line),
   FF_ADD_ACTION_FUNC(ff_a_single_note_line_double_key),
@@ -243,12 +243,12 @@ void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
 	if(!record->event.pressed) { return; }
 
   switch (id) {
-    case ff_a_melody_1:
+    case ff_a_pattern_1:
 		 //ff_led_signal();
-		 PPG_PRINTF("melody 1\n");
+		 PPG_PRINTF("pattern 1\n");
 		 break;
-    case ff_a_melody_2:
-		 PPG_PRINTF("melody 2\n");
+    case ff_a_pattern_2:
+		 PPG_PRINTF("pattern 2\n");
 		 //ff_led_flash();
 		 break;
     case ff_a_chord_and_cluster:
@@ -351,24 +351,33 @@ static void the_cluster_callback(void *user_data)
     k5C,k5B,k5A
 #endif
 
-#define KEY_52(S_) PPG_QMK_KEYPOS_HEX(5, 2, S_)
-#define KEY_5B(S_) PPG_QMK_KEYPOS_HEX(5, B, S_)
-#define KEY_5A(S_) PPG_QMK_KEYPOS_HEX(5, A, S_)
+// Define a bunch of key positions. 
+//
+// Important: Every define must feature the auxiliary macro parameter S
+//
+#define KEY_52(S) PPG_QMK_KEYPOS_HEX(5, 2, S)
+#define KEY_5B(S) PPG_QMK_KEYPOS_HEX(5, B, S)
+#define KEY_5A(S) PPG_QMK_KEYPOS_HEX(5, A, S)
 
-#define CHORD_KEY_1(S_) PPG_QMK_KEYPOS_HEX(2, 2, S_)
-#define CHORD_KEY_2(S_) PPG_QMK_KEYPOS_HEX(2, 3, S_)
-#define CHORD_KEY_3(S_) PPG_QMK_KEYPOS_HEX(2, 4, S_)
+#define CHORD_KEY_1(S) PPG_QMK_KEYPOS_HEX(2, 2, S)
+#define CHORD_KEY_2(S) PPG_QMK_KEYPOS_HEX(2, 3, S)
+#define CHORD_KEY_3(S) PPG_QMK_KEYPOS_HEX(2, 4, S)
 
-#define CLUSTER_KEY_1(S_) PPG_QMK_KEYPOS_HEX(2, 9, S_)
-#define CLUSTER_KEY_2(S_) PPG_QMK_KEYPOS_HEX(2, A, S_)
-#define CLUSTER_KEY_3(S_) PPG_QMK_KEYPOS_HEX(2, B, S_)
+#define CLUSTER_KEY_1(S) PPG_QMK_KEYPOS_HEX(2, 9, S)
+#define CLUSTER_KEY_2(S) PPG_QMK_KEYPOS_HEX(2, A, S)
+#define CLUSTER_KEY_3(S) PPG_QMK_KEYPOS_HEX(2, B, S)
 
-#define SINGLE_NOTE_LINE_KEY_1(S_) PPG_QMK_KEYPOS_HEX(1, 2, S_)
-#define SINGLE_NOTE_LINE_KEY_2(S_) PPG_QMK_KEYPOS_HEX(1, 3, S_)
-#define SINGLE_NOTE_LINE_KEY_3(S_) PPG_QMK_KEYPOS_HEX(1, 4, S_)
+#define SINGLE_NOTE_LINE_KEY_1(S) PPG_QMK_KEYPOS_HEX(1, 2, S)
+#define SINGLE_NOTE_LINE_KEY_2(S) PPG_QMK_KEYPOS_HEX(1, 3, S)
+#define SINGLE_NOTE_LINE_KEY_3(S) PPG_QMK_KEYPOS_HEX(1, 4, S)
 
-#define PPG_ABORT_KEY(S_) PPG_QMK_KEYPOS_HEX(5, 6, S_)
+#define PPG_ABORT_KEY(S) PPG_QMK_KEYPOS_HEX(5, 6, S)
 
+// Define a key set. 
+//
+// Important: - The key set must be named PPG_QMK_KEY_SET
+//            - Counters must start from zero, be contiguous and unique
+//
 #define PPG_QMK_KEY_SET(OP) \
 	OP(0,  KEY_52) \
 	OP(1,  KEY_5B) \
@@ -388,24 +397,25 @@ static void the_cluster_callback(void *user_data)
 	\
 	OP(12,  PPG_ABORT_KEY)
 	
+// Initialize Papageno data structures for qmk
+//
 PPG_QMK_INIT_DATA_STRUCTURES
 
 void init_papageno(void)
 {
 	PPG_QMK_INIT
 	
+	// When the abort key is pressed, pattern recognition is aborted
+	// the same as if timeout had occured.
+	//
 	ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
 	
 	ppg_qmk_set_timeout_ms(20000);
 // 	ppg_qmk_set_timeout_ms(500);
+
+	PPG_PRINTF("Keycode is %u\n", F(ff_a_pattern_1));
 	
-	/* Magic melodies are inherited by higher layers unless
-	 * overridden.
-	 */ 
-	
-	PPG_PRINTF("Keycode is %u\n", F(ff_a_melody_1));
-	
-	/* Single note line magic melody: Left inner large thumb key followed by
+	/* Single note line pattern: ErgoDox left inner large thumb key followed by
 	 * right inner large thumb key
 	 */
 	ppg_pattern(
@@ -415,13 +425,13 @@ void init_papageno(void)
 			ppg_token_set_action(
 				ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B)),
 				PPG_QMK_ACTION_KEYCODE(  
-					F(ff_a_melody_1)
+					F(ff_a_pattern_1)
 				)
 			)
 		)
 	);
 	
-	/* Single note line magic melody: Left inner large thumb key followed by
+	/* Single note line pattern: ErgoDox left inner large thumb key followed by
 	 * right inner large thumb key
 	 */
 	ppg_pattern(
@@ -431,13 +441,13 @@ void init_papageno(void)
 			ppg_token_set_action(
 				ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)),
 				PPG_QMK_ACTION_KEYCODE(
-					F(ff_a_melody_2)
+					F(ff_a_pattern_2)
 				)
 			)
 		)
 	);
 			
-	/* Melody specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
+	/* Pattern specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
 	 * j, k and l (QWERTY).
 	 */
 	ppg_pattern(
@@ -538,14 +548,14 @@ void init_papageno(void)
 		)
 	);
 	
-   #define FF_BACK_LINE_1(S_) PPG_QMK_KEYPOS_HEX(4, 2, S_)
-   #define FF_BACK_LINE_2(S_) PPG_QMK_KEYPOS_HEX(4, 3, S_)
-   #define FF_BACK_LINE_3(S_) PPG_QMK_KEYPOS_HEX(4, 4, S_)
-   #define FF_BACK_LINE_4(S_) PPG_QMK_KEYPOS_HEX(4, 9, S_)
-   #define FF_BACK_LINE_5(S_) PPG_QMK_KEYPOS_HEX(4, A, S_)
-   #define FF_BACK_LINE_6(S_) PPG_QMK_KEYPOS_HEX(4, B, S_)
+   #define FF_BACK_LINE_1(S) PPG_QMK_KEYPOS_HEX(4, 2, S)
+   #define FF_BACK_LINE_2(S) PPG_QMK_KEYPOS_HEX(4, 3, S)
+   #define FF_BACK_LINE_3(S) PPG_QMK_KEYPOS_HEX(4, 4, S)
+   #define FF_BACK_LINE_4(S) PPG_QMK_KEYPOS_HEX(4, 9, S)
+   #define FF_BACK_LINE_5(S) PPG_QMK_KEYPOS_HEX(4, A, S)
+   #define FF_BACK_LINE_6(S) PPG_QMK_KEYPOS_HEX(4, B, S)
 	
-	/* A magic melody to switch to the aux layer.
+	/* A pattern to switch to the aux layer.
 	 */
 	ppg_single_note_line(
 		ff_layer_base,
