@@ -73,28 +73,6 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout);
  */
 void ppg_qmk_flush_key_events(void);
 
-// typedef struct {
-// 	keypos_t keypos;
-// 	uint16_t keycode;
-// } PPG_QMK_Key_Data;
-// 
-// PPG_QMK_Key_Data *ppg_qmk_create_key_data(
-// 								keypos_t keypos,
-// 								uint16_t keycode);
-// 
-// enum PPG_QMK_Key_State {
-// 	PPG_QMK_Key_Released = 0,
-// 	PPG_QMK_Key_Pressed
-// };
-/*
-bool ppg_qmk_check_key_active(PPG_Input_Id input_id,
-										PPG_Input_State state);*/
-
-
-// bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2);
-
-// uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
-
 #define PPG_QMK_KEYPOS_HEX(COL, ROW, S___) \
 	S___(COL, ROW)
 

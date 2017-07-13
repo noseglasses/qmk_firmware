@@ -20,25 +20,6 @@
  */
 action_t action_for_configured_keycode(uint16_t keycode);
 
-// inline
-// static uint16_t ppg_qmk_get_event_state(PPG_Input_State *state)
-// {
-// 	return *(uint16_t*)&state;
-// }
-
-// inline 
-// static void ppg_qmk_set_event_state(PPG_Input_State *target,
-// 												uint16_t source)
-// {
-// 	*(uint16_t*)target = source;
-// }
-// 
-// inline 
-// static PPG_Input_State ppg_qmk_to_event_state(uint16_t source)
-// {
-// 	return *(PPG_Input_State*)&source;
-// }
-
 void ppg_qmk_process_event_callback(	
 										PPG_Event *event,
 										void *user_data)
@@ -50,6 +31,8 @@ void ppg_qmk_process_event_callback(
 	keypos_t key = ppg_qmk_keypos_lookup[event->input];
   uint16_t keycode;
 	
+  // The following was taken from quantum.c
+  
 	#if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
     /* TODO: Use store_or_get_action() or a similar function. */
     if (!disable_action_cache) {
@@ -177,51 +160,3 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout)
 {
 	ppg_global_set_timeout((PPG_Time)timeout);
 }
-
-// uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col)
-// {
-// 	uint16_t result = (*(uint16_t*)(&(keypos_t){ .row = row, .col = col}));
-// 		
-// // 	PPG_PRINTF("row = %u\n", row);
-// // 	PPG_PRINTF("col = %u\n", col);
-// // 	PPG_PRINTF("result = %u\n", result);
-// 	
-// 	return result;
-// }
-
-// PPG_QMK_Key_Data *ppg_qmk_create_key_data(
-// 										keypos_t keypos,
-// 										uint16_t keycode)
-// {
-// 	PPG_QMK_Key_Data *kd = (PPG_QMK_Key_Data*)malloc(sizeof(PPG_QMK_Key_Data));
-// 	
-// 	kd->keypos = keypos;
-// 	kd->keycode = keycode;
-// 	
-// // 	PPG_PRINTF("kd->data == %u\n", kd->data);
-// // 	PPG_PRINTF("kd->is_keycode == %d\n", kd->is_keycode);
-// 	
-// 	return kd;
-// }
-
-// bool ppg_qmk_check_key_active(PPG_Input_Id input_id,
-// 										PPG_Input_State state)
-// {
-// 	return (ppg_qmk_get_event_state(state) == PPG_QMK_Key_Pressed);
-// }
-
-// bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2)
-// {
-// 	PPG_QMK_Key_Data *kd1 = (PPG_QMK_Key_Data *)input_id1;
-// 	PPG_QMK_Key_Data *kd2 = (PPG_QMK_Key_Data *)input_id2;
-// 	
-// // 	PPG_PRINTF("kd1->data == %u\n", kd1->data);
-// // 	PPG_PRINTF("kd2->data == %u\n", kd2->data);
-// // 	PPG_PRINTF("kd1->is_keycode == %d\n", kd1->is_keycode);
-// // 	PPG_PRINTF("kd2->is_keycode == %d\n", kd2->is_keycode);
-// 	
-// 	return 	((kd1->keycode == kd2->keycode) && (kd1->keycode != 0))
-// 			||	(		((kd1->keypos.row == kd2->keypos.row) && (kd1->keypos.row != 0))
-// 					&&	((kd1->keypos.col == kd2->keypos.col) && (kd1->keypos.col != 0))
-// 				);
-// }
