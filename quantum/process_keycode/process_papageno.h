@@ -37,9 +37,12 @@
 #include "quantum.h"
 #include "tmk_core/common/keyboard.h"
 
-bool ppg_qmk_process_event_callback(	
+extern keypos_t ppg_qmk_keypos_lookup[];
+
+extern PPG_Input_Id ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
+
+void ppg_qmk_process_event_callback(	
 								PPG_Event *key_event,
-								uint8_t slot_id, 
 								void *user_data);
 
 void ppg_qmk_flush_key_events(void);
@@ -48,7 +51,7 @@ void ppg_qmk_process_keycode(
 								uint8_t slot_id, 
 								void *user_data);
 
-bool ppg_qmk_process_event(
+void ppg_qmk_process_event(
 								uint16_t keycode, 
 								keyrecord_t *record);
 
@@ -70,48 +73,49 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout);
  */
 void ppg_qmk_flush_key_events(void);
 
-typedef struct {
-	keypos_t keypos;
-	uint16_t keycode;
-} PPG_QMK_Key_Data;
-
-PPG_QMK_Key_Data *ppg_qmk_create_key_data(
-								keypos_t keypos,
-								uint16_t keycode);
-
-enum PPG_QMK_Key_State {
-	PPG_QMK_Key_Released = 0,
-	PPG_QMK_Key_Pressed
-};
-
+// typedef struct {
+// 	keypos_t keypos;
+// 	uint16_t keycode;
+// } PPG_QMK_Key_Data;
+// 
+// PPG_QMK_Key_Data *ppg_qmk_create_key_data(
+// 								keypos_t keypos,
+// 								uint16_t keycode);
+// 
+// enum PPG_QMK_Key_State {
+// 	PPG_QMK_Key_Released = 0,
+// 	PPG_QMK_Key_Pressed
+// };
+/*
 bool ppg_qmk_check_key_active(PPG_Input_Id input_id,
-										PPG_Input_State state);
+										PPG_Input_State state);*/
 
 
-bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2);
+// bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2);
 
-uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
+// uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
 
-#define PPG_QMK_KEYPOS_HEX(COL, ROW) \
+#define PPG_QMK_KEYPOS_HEX(COL, ROW, S___) \
+	S___(COL, ROW)
+
+#define PPG_QMK_KEYPOS_HEX_1(COL, ROW) \
 	(keypos_t){ .row = 0x##ROW, .col = 0x##COL }
 
-#define PPG_QMK_MATRIX_KEY_HEX(COL, ROW) \
-	(PPG_Input) { \
-		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(COL, ROW), 0), \
-		.check_active = (PPG_Input_Active_Check_Fun)ppg_qmk_check_key_active \
-	}
+// #define PPG_QMK_MATRIX_KEY_HEX(COL, ROW) 
+// 	(PPG_Input_Id) { 
+// 		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(COL, ROW), 0) 
+// 	}
 	
-#define PPG_QMK_KEYCODE_KEY(KK) \
-	(PPG_Input) { \
-		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(0, 0), KK), \
-		.check_active = (PPG_Input_Active_Check_Fun)ppg_qmk_check_key_active, \
-	}	
+// #define PPG_QMK_KEYCODE_KEY(KK) 
+// 	(PPG_Input) { 
+// 		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(0, 0), KK) 
+// 	}	
 
 #define PPG_QMK_ACTION_KEYCODE(KK) \
 	(PPG_Action) {	\
 		.flags = PPG_Action_Default, \
-		.user_callback = (PPG_User_Callback) { \
-			.func = (PPG_User_Callback_Fun)ppg_qmk_process_keycode,  \
+		.callback = (PPG_Action_Callback) { \
+			.func = (PPG_Action_Callback_Fun)ppg_qmk_process_keycode,  \
 			.user_data = (void*)(uint16_t)KK \
 		} \
 	}
@@ -124,9 +128,69 @@ uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
 	\
 	ppg_global_set_time_function((PPG_Time_Fun)ppg_qmk_time); \
 	ppg_global_set_time_difference_function((PPG_Time_Difference_Fun)ppg_qmk_time_difference); \
-	ppg_global_set_time_comparison_function((PPG_Time_Comparison_Fun)ppg_qmk_time_comparison); \
-	ppg_global_set_input_id_equal_function((PPG_Input_Id_Equal_Fun)ppg_qmk_input_id_equal); 
+	ppg_global_set_time_comparison_function((PPG_Time_Comparison_Fun)ppg_qmk_time_comparison);
 	
 #define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
+	
+#define PPG_QMK_CONVERT_TO_CASE_LABEL(ROW_HEX, COL_HEX) \
+	256*0x##ROW_HEX + 0x##COL_HEX
+	
+/** @param KEYPOS_ALIAS An alias that is define by the user 
+ *            that consumes a parameter S that is 
+ *            the name of a macro function that consumes
+ *            two parameters ROW and COL
+ */
+#define PPG_QMK_KEYPOS_CASE_LABEL(RET_VAL, KEYPOS_ALIAS) \
+	case KEYPOS_ALIAS(PPG_QMK_CONVERT_TO_CASE_LABEL): \
+		return RET_VAL; \
+		break;
+	
+#define PPG_INIT_INPUT_ID_FROM_KEYPOS_FUNCTION \
+	\
+	PPG_Input_Id ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col) \
+	{ \
+		uint16_t id = 256*row + col; \
+		\
+		switch(id) { \
+			\
+			PPG_QMK_KEY_SET(PPG_QMK_KEYPOS_CASE_LABEL) \
+			\
+			default: \
+				PPG_ERROR("Undefined keypos\n"); \
+				break; \
+		} \
+		\
+		return (PPG_Input_Id)-1; \
+	}
+	
+#define PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY_AUX(ROW_HEX, COL_HEX) \
+	/*(keypos_t)*/{ .row = 0x##ROW_HEX, .col = 0x##COL_HEX },
+	
+#define PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY(ROW_HEX, COL_HEX) \
+	PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY_AUX(ROW_HEX, COL_HEX)
+	
+#define PPG_QMK_KEYPOS_TO_LOOKUP_ENTRY(RET_VAL, KEYPOS_ALIAS) \
+	KEYPOS_ALIAS(PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY)
+	
+#define PPG_QMK_INIT_KEYPOS_LOOKUP \
+	\
+	keypos_t ppg_qmk_keypos_lookup[] = { \
+		\
+		PPG_QMK_KEY_SET(PPG_QMK_KEYPOS_TO_LOOKUP_ENTRY) \
+		\
+		PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY_AUX(FF, FF) \
+	};
+	
+#define PPG_QMK_INIT_DATA_STRUCTURES \
+	\
+	PPG_INIT_INPUT_ID_FROM_KEYPOS_FUNCTION \
+	\
+	PPG_QMK_INIT_KEYPOS_LOOKUP
+	
+#define PPG_QMK_INPUT_FROM_KEYPOS_CALL(ROW_HEX, COL_HEX) \
+	ppg_qmk_input_id_from_keypos(0x##ROW_HEX, 0x##COL_HEX)
+	
+#define PPG_QMK_INPUT_FROM_KEYPOS(KEYPOS_ALIAS) \
+	KEYPOS_ALIAS(PPG_QMK_INPUT_FROM_KEYPOS_CALL)
 
 #endif

@@ -20,52 +20,65 @@
  */
 action_t action_for_configured_keycode(uint16_t keycode);
 
-inline
-static uint16_t ppg_qmk_get_event_state(PPG_Input_State *state)
-{
-	return *(uint16_t*)&state;
-}
+// inline
+// static uint16_t ppg_qmk_get_event_state(PPG_Input_State *state)
+// {
+// 	return *(uint16_t*)&state;
+// }
 
-inline 
-static void ppg_qmk_set_event_state(PPG_Input_State *target,
-												uint16_t source)
-{
-	*(uint16_t*)target = source;
-}
+// inline 
+// static void ppg_qmk_set_event_state(PPG_Input_State *target,
+// 												uint16_t source)
+// {
+// 	*(uint16_t*)target = source;
+// }
+// 
+// inline 
+// static PPG_Input_State ppg_qmk_to_event_state(uint16_t source)
+// {
+// 	return *(PPG_Input_State*)&source;
+// }
 
-inline 
-static PPG_Input_State ppg_qmk_to_event_state(uint16_t source)
-{
-	return *(PPG_Input_State*)&source;
-}
-
-bool ppg_qmk_process_event_callback(	
+void ppg_qmk_process_event_callback(	
 										PPG_Event *event,
-										uint8_t slot_id, 
 										void *user_data)
 {
-	PPG_QMK_Key_Data *key_data = (PPG_QMK_Key_Data *)event->input_id;
+	// Ignore events that were considered
+	//
+	if(event->flags & PPG_Event_Considered) { return; }
 	
-	bool pressed 
-		= (ppg_qmk_get_event_state(event->state) == PPG_QMK_Key_Pressed)
-					? true : false;
+	keypos_t key = ppg_qmk_keypos_lookup[event->input];
+  uint16_t keycode;
+	
+	#if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
+    /* TODO: Use store_or_get_action() or a similar function. */
+    if (!disable_action_cache) {
+      uint8_t layer;
+
+      if (event->flags & PPG_Event_Active) {
+        layer = layer_switch_get_layer(key);
+        update_source_layers_cache(key, layer);
+      } else {
+        layer = read_source_layers_cache(key);
+      }
+      keycode = keymap_key_to_keycode(layer, key);
+    } else
+  #endif
+    keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
 				
-	PPG_PRINTF("Issuing keycode %u, pressed = %u\n", key_data->keycode, pressed);
+	PPG_PRINTF("Issuing keycode %u, pressed = %u\n", keycode, event->flags & PPG_Event_Active);
 	
-	if(pressed) {
-		register_code16(key_data->keycode);
+	if(event->flags & PPG_Event_Active) {
+		register_code16(keycode);
 	}
 	else {
-		unregister_code16(key_data->keycode);
+		unregister_code16(keycode);
 	}
-	
-	return true;
 }
 
 void ppg_qmk_flush_events(void)
 {	
-	ppg_event_buffer_flush(
-		PPG_On_User,
+	ppg_event_buffer_iterate(
 		ppg_qmk_process_event_callback,
 		NULL
 	);
@@ -115,28 +128,21 @@ void ppg_qmk_process_keycode(uint8_t slot_id, void *user_data) {
 	}
 }
 
-bool ppg_qmk_process_event(
+void ppg_qmk_process_event(
 				uint16_t keycode, 
 				keyrecord_t *record)
 {
-	PPG_QMK_Key_Data key_data = {
-		.keypos = record->event.key,
-		.keycode = keycode
-	};
-	
 	PPG_Event event = {
-		.input_id = &key_data,
+		.input = ppg_qmk_input_id_from_keypos(record->event.key.row, record->event.key.col),
 		.time = (PPG_Time)record->event.time,
-		.state = ppg_qmk_to_event_state(
-				(record->event.pressed) ? PPG_QMK_Key_Pressed : PPG_QMK_Key_Released
-			)
+		.flags = (record->event.pressed) ? PPG_Event_Active : PPG_Event_Flags_Empty
 	};
 	
 	uint8_t cur_layer = biton32(layer_state);
 	
 	ppg_global_set_layer(cur_layer);
 	
-	return ppg_event_process(
+	ppg_event_process(
 							&event);
 }
 
@@ -183,39 +189,39 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout)
 // 	return result;
 // }
 
-PPG_QMK_Key_Data *ppg_qmk_create_key_data(
-										keypos_t keypos,
-										uint16_t keycode)
-{
-	PPG_QMK_Key_Data *kd = (PPG_QMK_Key_Data*)malloc(sizeof(PPG_QMK_Key_Data));
-	
-	kd->keypos = keypos;
-	kd->keycode = keycode;
-	
-// 	PPG_PRINTF("kd->data == %u\n", kd->data);
-// 	PPG_PRINTF("kd->is_keycode == %d\n", kd->is_keycode);
-	
-	return kd;
-}
+// PPG_QMK_Key_Data *ppg_qmk_create_key_data(
+// 										keypos_t keypos,
+// 										uint16_t keycode)
+// {
+// 	PPG_QMK_Key_Data *kd = (PPG_QMK_Key_Data*)malloc(sizeof(PPG_QMK_Key_Data));
+// 	
+// 	kd->keypos = keypos;
+// 	kd->keycode = keycode;
+// 	
+// // 	PPG_PRINTF("kd->data == %u\n", kd->data);
+// // 	PPG_PRINTF("kd->is_keycode == %d\n", kd->is_keycode);
+// 	
+// 	return kd;
+// }
 
-bool ppg_qmk_check_key_active(PPG_Input_Id input_id,
-										PPG_Input_State state)
-{
-	return (ppg_qmk_get_event_state(state) == PPG_QMK_Key_Pressed);
-}
+// bool ppg_qmk_check_key_active(PPG_Input_Id input_id,
+// 										PPG_Input_State state)
+// {
+// 	return (ppg_qmk_get_event_state(state) == PPG_QMK_Key_Pressed);
+// }
 
-bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2)
-{
-	PPG_QMK_Key_Data *kd1 = (PPG_QMK_Key_Data *)input_id1;
-	PPG_QMK_Key_Data *kd2 = (PPG_QMK_Key_Data *)input_id2;
-	
-// 	PPG_PRINTF("kd1->data == %u\n", kd1->data);
-// 	PPG_PRINTF("kd2->data == %u\n", kd2->data);
-// 	PPG_PRINTF("kd1->is_keycode == %d\n", kd1->is_keycode);
-// 	PPG_PRINTF("kd2->is_keycode == %d\n", kd2->is_keycode);
-	
-	return 	((kd1->keycode == kd2->keycode) && (kd1->keycode != 0))
-			||	(		((kd1->keypos.row == kd2->keypos.row) && (kd1->keypos.row != 0))
-					&&	((kd1->keypos.col == kd2->keypos.col) && (kd1->keypos.col != 0))
-				);
-}
+// bool ppg_qmk_input_id_equal(PPG_Input_Id input_id1, PPG_Input_Id input_id2)
+// {
+// 	PPG_QMK_Key_Data *kd1 = (PPG_QMK_Key_Data *)input_id1;
+// 	PPG_QMK_Key_Data *kd2 = (PPG_QMK_Key_Data *)input_id2;
+// 	
+// // 	PPG_PRINTF("kd1->data == %u\n", kd1->data);
+// // 	PPG_PRINTF("kd2->data == %u\n", kd2->data);
+// // 	PPG_PRINTF("kd1->is_keycode == %d\n", kd1->is_keycode);
+// // 	PPG_PRINTF("kd2->is_keycode == %d\n", kd2->is_keycode);
+// 	
+// 	return 	((kd1->keycode == kd2->keycode) && (kd1->keycode != 0))
+// 			||	(		((kd1->keypos.row == kd2->keypos.row) && (kd1->keypos.row != 0))
+// 					&&	((kd1->keypos.col == kd2->keypos.col) && (kd1->keypos.col != 0))
+// 				);
+// }
