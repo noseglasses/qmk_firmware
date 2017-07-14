@@ -87,7 +87,7 @@ endif
 
 ifeq ($(strip $(RGBLIGHT_ENABLE)), yes)
     OPT_DEFS += -DRGBLIGHT_ENABLE
-    SRC += $(QUANTUM_DIR)/light_ws2812.c
+    SRC += ws2812.c
     SRC += $(QUANTUM_DIR)/rgblight.c
     CIE1931_CURVE = yes
     LED_BREATHING_TABLE = yes
@@ -109,8 +109,9 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_global_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_input_detail.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_note_detail.c
-    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_pattern_detail.c                                                                                                         
-    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_token_detail.c                                                                                                           
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_pattern_detail.c 
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_signal_detail.c                                                                                                        
+    SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_token_detail.c                                                                                                         
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_bitfield.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_chord.c
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_cluster.c                                                                                                                       
