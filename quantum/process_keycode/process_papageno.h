@@ -1,4 +1,4 @@
-/* Copyright 2016 Jack Humbert
+/* Copyright 2017 Florian Fleissner
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,18 +21,16 @@
  * This is an interface to the Papageno library. It allows for using 
  * Papageno magic melodies as part of the qmk firmware.
  * 
- * As Papageno's definition of what is a key is very arbitrary, it is possible to
+ * As Papageno's definition of what is an input is very arbitrary, it is possible to
  * use keyboard matix coordinates as well as qmk keycodes to define keys (notes in Papageno jargon).
+ * 
+ * Key press and release actions are passed to Papageno.
  * Use the macro PPG_QMK_MATRIX_KEY_HEX to specify a physical key with respect to its
  * hexadecimal row and column ids or the macro PPG_QMK_KEYCODE_KEY to specify a qmk keycode
  * as key identifier.
  * 
- * To allow all this to work, magic melodies are partially independent of keymaps and implemented
- * on top of them. 
- * 
- * Be careful with layer switching actions. As a general rule these are acceptable in case of melody completion.
- * They may be acceptable on fall back. And finally, it is very important not to assign the flag PPG_Action_Immediate
- * to any layer switching actions as Papageno cannot deal with layer switching while a melody is in progress.
+ * Be careful with layer switching actions as they abort
+ * pattern matching.
 */
 
 #include "papageno.h"
@@ -106,7 +104,7 @@ uint16_t ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
 #define PPG_QMK_KEYCODE_KEY(KK) \
 	(PPG_Input) { \
 		.input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(0, 0), KK), \
-		.check_active = (PPG_Input_Activation_Check_Fun)ppg_qmk_check_key_active, \
+		.check_active = (PPG_Input_Active_Check_Fun)ppg_qmk_check_key_active, \
 	}	
 
 #define PPG_QMK_ACTION_KEYCODE(KK) \
