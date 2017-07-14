@@ -16,6 +16,122 @@
 
 #include "process_papageno.h"
 
+#ifdef PPG_QMK_ERGODOX
+#include "ergodox.h"
+
+typedef struct {
+	uint8_t DDRD__;
+	uint8_t DDRB__;
+	uint8_t PORTD__;
+	uint8_t PORTB__;
+} Led_Registers;
+
+static Led_Registers led_registers;
+
+#define SAFE_REG(S) led_registers.S##__ = S;
+#define RESTORE_REG(S) S = led_registers.S##__;
+
+static void ff_safe_led_state(void)
+{
+	SAFE_REG(DDRD)
+	SAFE_REG(DDRB)
+	SAFE_REG(PORTD)
+	SAFE_REG(PORTB)
+}
+
+static void ff_restore_led_state(void)
+{
+	RESTORE_REG(DDRD)
+	RESTORE_REG(DDRB)
+	RESTORE_REG(PORTD)
+	RESTORE_REG(PORTB)
+}
+
+void ppg_qmk_led_signal(void)
+{
+	ff_safe_led_state();
+	
+	wait_ms(100);
+	
+	ergodox_led_all_on();
+	
+	wait_ms(100);
+	
+	ff_restore_led_state();
+}
+
+#define FF_LED_FLASH(LED_ID) \
+	ergodox_right_led_##LED_ID##_on(); \
+	wait_ms(100);	\
+	ergodox_right_led_##LED_ID##_off();
+
+void ppg_qmk_led_flash(void)
+{
+	ff_safe_led_state();
+	
+	ergodox_led_all_off();
+	
+	FF_LED_FLASH(1)
+	FF_LED_FLASH(2)
+	FF_LED_FLASH(3)
+	
+	ff_restore_led_state();
+}
+
+void ppg_qmk_led_superflash(void)
+{
+	ppg_qmk_led_flash();
+	wait_ms(200);
+	ppg_qmk_led_flash();
+	wait_ms(200);
+	ppg_qmk_led_flash();
+}
+
+void ppg_qmk_code_key_considered(void)
+{
+	ff_safe_led_state();
+	
+	wait_ms(100);
+	
+	ergodox_led_all_off();
+	ergodox_right_led_2_on();
+	
+	wait_ms(200);
+	
+	ff_restore_led_state();
+}
+
+void ppg_qmk_code_key_flushed(void)
+{
+	ff_safe_led_state();
+	
+	wait_ms(100);
+	
+	ergodox_led_all_off();
+	ergodox_right_led_3_on();
+	
+	wait_ms(200);
+	
+	ff_restore_led_state();
+}
+
+void ppg_qmk_code_key_blocked(void)
+{
+	ff_safe_led_state();
+	
+	wait_ms(100);
+	
+	ergodox_led_all_off();
+	ergodox_right_led_1_on();
+	
+	wait_ms(200);
+	
+	ff_restore_led_state();
+}
+
+
+#endif // PPG_QMK_ERGODOX
+
 /* This function is defined in quantum/keymap_common.c 
  */
 action_t action_for_configured_keycode(uint16_t keycode);
@@ -26,9 +142,24 @@ void ppg_qmk_process_event_callback(
 {
 	// Ignore events that were considered
 	//
-	if(event->flags & PPG_Event_Considered) { return; }
+	if(event->flags & PPG_Event_Considered) {
+		
+		#ifdef PPG_QMK_ERGODOX
+		ppg_qmk_code_key_blocked();
+		#endif
+		
+		return; 
+	}
+	
+	#ifdef PPG_QMK_ERGODOX
+	ppg_qmk_code_key_flushed();
+	#endif
 	
 	keypos_t key = ppg_qmk_keypos_lookup[event->input];
+	
+// 	uprintf("Event input %d\n", event->input);
+// 	uprintf("Flushing key row %d, col %d\n", key.row, key.col);
+	
   uint16_t keycode;
 	
   // The following was taken from quantum.c
@@ -51,11 +182,16 @@ void ppg_qmk_process_event_callback(
 				
 	PPG_PRINTF("Issuing keycode %u, pressed = %u\n", keycode, event->flags & PPG_Event_Active);
 	
+	
+		uint16_t configured_keycode = keycode_config(keycode);
+	
 	if(event->flags & PPG_Event_Active) {
-		register_code16(keycode);
+// 		register_code16(keycode);
+		register_code16(configured_keycode);
 	}
 	else {
-		unregister_code16(keycode);
+// 		unregister_code16(keycode);
+		unregister_code16(configured_keycode);
 	}
 }
 
@@ -67,9 +203,11 @@ void ppg_qmk_flush_events(void)
 	);
 }
 
-void ppg_qmk_process_keycode(uint8_t slot_id, void *user_data) {
+void ppg_qmk_process_keycode(void *user_data) {
 	
 	uint16_t keycode = (uint16_t)user_data;
+		
+	uprintf("keycode %u\n", keycode);
 	
 	if(keycode != 0) {
 		
@@ -87,13 +225,13 @@ void ppg_qmk_process_keycode(uint8_t slot_id, void *user_data) {
 			record.event.time = timer_read();
 			
 		/* Use the quantum/tmk system to trigger the action
-			* thereby using a fictituous a key (0, 0) with which the action 
+			* thereby using a fictituous key (0, 0) with which the action 
 			* keycode is associated. We pretend that the respective key
 			* was hit and released to make sure that any action that
 			* requires both events is correctly processed.
 			* Unfortunatelly this means that some actions that
 			* require keys to be held do not make sense, e.g.
-			* modifier keys or MO(...), etc.is
+			* modifier keys or MO(...), etc.
 			*/
 		
 		uint16_t configured_keycode = keycode_config(keycode);
@@ -111,22 +249,37 @@ void ppg_qmk_process_keycode(uint8_t slot_id, void *user_data) {
 	}
 }
 
-void ppg_qmk_process_event(
+bool ppg_qmk_process_event(
 				uint16_t keycode, 
 				keyrecord_t *record)
 {
+	uint8_t input = ppg_qmk_input_id_from_keypos(
+								record->event.key.row, 
+								record->event.key.col);
+	
+// 	uprintf("input %d, row %d, col %d\n", input, record->event.key.row, 
+// 								record->event.key.col);
+	
+	if(PPG_QMK_Empty_Input == input) { return false; }
+	
+	#ifdef PPG_QMK_ERGODOX
+	ppg_qmk_code_key_considered();
+	#endif
+	
 	PPG_Event event = {
-		.input = ppg_qmk_input_id_from_keypos(record->event.key.row, record->event.key.col),
+		.input = input,
 		.time = (PPG_Time)record->event.time,
-		.flags = (record->event.pressed) ? PPG_Event_Active : PPG_Event_Flags_Empty
+		.flags = (record->event.pressed) 
+							? PPG_Event_Active : PPG_Event_Flags_Empty
 	};
 	
 	uint8_t cur_layer = biton32(layer_state);
 	
 	ppg_global_set_layer(cur_layer);
 	
-	ppg_event_process(
-							&event);
+	ppg_event_process(&event);
+	
+	return true;
 }
 
 void ppg_qmk_time(PPG_Time *time)
@@ -154,6 +307,27 @@ int8_t ppg_qmk_time_comparison(
 	}
 	 
 	return -1;
+}
+
+void ppg_qmk_signal_callback(PPG_Slot_Id slot_id, void *user_data)
+{
+	uprintf("slot %u\n", slot_id	);
+	
+	switch(slot_id) {
+		case PPG_On_Abort:
+			ppg_qmk_flush_events();
+			break;
+		case PPG_On_Timeout:
+			ppg_qmk_flush_events();
+			break;
+		case PPG_On_Match_Failed:
+			break;
+		default:
+			return;
+	}
+	#ifdef PPG_QMK_ERGODOX
+	ppg_qmk_code_key_blocked();
+	#endif
 }
 
 void ppg_qmk_set_timeout_ms(uint16_t timeout)

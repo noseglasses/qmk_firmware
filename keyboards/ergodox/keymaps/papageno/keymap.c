@@ -144,190 +144,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // 	),
 };
 
-typedef struct {
-	uint8_t DDRD__;
-	uint8_t DDRB__;
-	uint8_t PORTD__;
-	uint8_t PORTB__;
-} Led_Registers;
-
-static Led_Registers led_registers;
-
-#define SAFE_REG(S) led_registers.S##__ = S;
-#define RESTORE_REG(S) S = led_registers.S##__;
-
-static void ff_safe_led_state(void)
-{
-	SAFE_REG(DDRD)
-	SAFE_REG(DDRB)
-	SAFE_REG(PORTD)
-	SAFE_REG(PORTB)
-}
-
-static void ff_restore_led_state(void)
-{
-	RESTORE_REG(DDRD)
-	RESTORE_REG(DDRB)
-	RESTORE_REG(PORTD)
-	RESTORE_REG(PORTB)
-}
-
-void ff_led_signal(void)
-{
-	ff_safe_led_state();
-	
-	ergodox_led_all_on();
-	
-	wait_ms (500);
-	
-	ff_restore_led_state();
-}
-
-#define FF_LED_FLASH(LED_ID) \
-	ergodox_right_led_##LED_ID##_on(); \
-	wait_ms(100);	\
-	ergodox_right_led_##LED_ID##_off();
-
-void ff_led_flash(void)
-{
-	ff_safe_led_state();
-	
-	ergodox_led_all_off();
-	
-	FF_LED_FLASH(1)
-	FF_LED_FLASH(2)
-	FF_LED_FLASH(3)
-	
-	ff_restore_led_state();
-}
-
-void ff_led_superflash(void)
-{
-	ff_led_flash();
-	wait_ms(200);
-	ff_led_flash();
-	wait_ms(200);
-	ff_led_flash();
-}
-
-enum {
-	ff_a_pattern_1 = 2,
-	ff_a_pattern_2,
-	ff_a_chord_and_cluster,
-	ff_a_single_note_line,
-	ff_a_single_note_line_double_key,
-	ff_a_tap_dance,
-	ff_a_single_chord,
-	ff_a_single_cluster
-};
-
-#define FF_ADD_ACTION_FUNC(S) [S] = ACTION_FUNCTION(S)
-
-const uint16_t PROGMEM fn_actions[] = {
-	
-  [1] = ACTION_LAYER_TAP_TOGGLE(1),
-  
-  FF_ADD_ACTION_FUNC(ff_a_pattern_1),
-  FF_ADD_ACTION_FUNC(ff_a_pattern_2),
-  FF_ADD_ACTION_FUNC(ff_a_chord_and_cluster),
-  FF_ADD_ACTION_FUNC(ff_a_single_note_line),
-  FF_ADD_ACTION_FUNC(ff_a_single_note_line_double_key),
-  FF_ADD_ACTION_FUNC(ff_a_tap_dance),
-  FF_ADD_ACTION_FUNC(ff_a_single_chord)
-};
-
-void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
-	
-	/* Only react on keyup
-	 */
-	if(!record->event.pressed) { return; }
-
-  switch (id) {
-    case ff_a_pattern_1:
-		 //ff_led_signal();
-		 PPG_PRINTF("pattern 1\n");
-		 break;
-    case ff_a_pattern_2:
-		 PPG_PRINTF("pattern 2\n");
-		 //ff_led_flash();
-		 break;
-    case ff_a_chord_and_cluster:
-		 PPG_PRINTF("chord and cluster\n");
-		// ff_led_superflash();
-		 break;
-    case ff_a_single_note_line:
-		 PPG_PRINTF("noteline\n");
-		 //ff_led_superflash();
-		 break;
-    case ff_a_single_note_line_double_key:
-		 PPG_PRINTF("single note line with double tap\n");
-		// ff_led_superflash();
-		 break;
-    case ff_a_tap_dance:
-		 PPG_PRINTF("tap dance\n");
-		 //ff_led_superflash();
-		 break;
-    case ff_a_single_chord:
-		 PPG_PRINTF("isolated chord\n");
-		 //ff_led_superflash();
-		 break;
-  }
-}
-
-// leaving this in place for compatibilty with old keymaps cloned and re-compiled.
-const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
-{
-      switch(id) {
-        case 0:
-        if (record->event.pressed) {
-          SEND_STRING (QMK_KEYBOARD "/" QMK_KEYMAP " @ " QMK_VERSION);
-        }
-        break;
-      }
-    return MACRO_NONE;
-};
-
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-	
-// 	PPG_PRINTF("process_record_user\n");
-// 	PPG_PRINTF("   keycode: %d\n", keycode);
-// 	PPG_PRINTF("   pressed: %d\n", record->event.pressed);
-// 	PPG_PRINTF("   row: %d\n", record->event.key.row);
-// 	PPG_PRINTF("   col: %d\n", record->event.key.col);is
-	
-	ppg_qmk_process_event(keycode, record);
-	
-	return false;
-/*
-  switch (keycode) {
-    // dynamically generate these.
-    case EPRM:
-      if (record->event.pressed) {
-        eeconfig_init();
-      }
-      return false;
-      break;
-    case VRSN:
-      if (record->event.pressed) {
-        SEND_STRING (QMK_KEYBOARD "/" QMK_KEYMAP " @ " QMK_VERSION);
-      }
-      return false;
-      break;
-    case RGB_SLD:
-      if (record->event.pressed) {
-        rgblight_mode(1);
-      }
-      return false;
-      break;
-    
-  }
-  return true;*/
-}
-
-static void the_cluster_callback(void *user_data)
-{
-	PPG_PRINTF("cluster callback: %d\n", (size_t)user_data);
-}
 
 #if 0
     /* left hand, spatial positions */                          
@@ -373,33 +189,204 @@ static void the_cluster_callback(void *user_data)
 
 #define PPG_ABORT_KEY(S) PPG_QMK_KEYPOS_HEX(5, 6, S)
 
+#define FF_BACK_LINE_1(S) PPG_QMK_KEYPOS_HEX(4, 2, S)
+#define FF_BACK_LINE_2(S) PPG_QMK_KEYPOS_HEX(4, 3, S)
+#define FF_BACK_LINE_3(S) PPG_QMK_KEYPOS_HEX(4, 4, S)
+#define FF_BACK_LINE_4(S) PPG_QMK_KEYPOS_HEX(4, 9, S)
+#define FF_BACK_LINE_5(S) PPG_QMK_KEYPOS_HEX(4, A, S)
+#define FF_BACK_LINE_6(S) PPG_QMK_KEYPOS_HEX(4, B, S)
+
 // Define a key set. 
 //
 // Important: - The key set must be named PPG_QMK_KEY_SET
 //            - Counters must start from zero, be contiguous and unique
 //
 #define PPG_QMK_KEY_SET(OP) \
-	OP(0,  KEY_52) \
-	OP(1,  KEY_5B) \
-	OP(2,  KEY_5A) \
+	OP(KEY_52) \
+	OP(KEY_5B) \
+	OP(KEY_5A) \
 	\
-	OP(3,  CHORD_KEY_1) \
-	OP(4,  CHORD_KEY_2) \
-	OP(5,  CHORD_KEY_3) \
+	OP(CHORD_KEY_1) \
+	OP(CHORD_KEY_2) \
+	OP(CHORD_KEY_3) \
 	\
-	OP(6,  CLUSTER_KEY_1) \
-	OP(7,  CLUSTER_KEY_2) \
-	OP(8,  CLUSTER_KEY_3) \
+	OP(CLUSTER_KEY_1) \
+	OP(CLUSTER_KEY_2) \
+	OP(CLUSTER_KEY_3) \
 	\
-	OP(9,  SINGLE_NOTE_LINE_KEY_1) \
-	OP(10,  SINGLE_NOTE_LINE_KEY_2) \
-	OP(11,  SINGLE_NOTE_LINE_KEY_3) \
+	OP(SINGLE_NOTE_LINE_KEY_1) \
+	OP(SINGLE_NOTE_LINE_KEY_2) \
+	OP(SINGLE_NOTE_LINE_KEY_3) \
 	\
-	OP(12,  PPG_ABORT_KEY)
+	OP(PPG_ABORT_KEY) \
+	\
+	OP(FF_BACK_LINE_1) \
+	OP(FF_BACK_LINE_2) \
+	OP(FF_BACK_LINE_3) \
+	OP(FF_BACK_LINE_4) \
+	OP(FF_BACK_LINE_5) \
+	OP(FF_BACK_LINE_6)
 	
 // Initialize Papageno data structures for qmk
 //
 PPG_QMK_INIT_DATA_STRUCTURES
+
+enum {
+	ff_a_pattern_1 = 2,
+	ff_a_pattern_2,
+	ff_a_chord_and_cluster,
+	ff_a_single_note_line,
+	ff_a_single_note_line_double_key,
+	ff_a_tap_dance,
+	ff_a_single_chord,
+	ff_a_single_cluster
+};
+
+#define FF_ADD_ACTION_FUNC(S) [S] = ACTION_FUNCTION(S)
+
+const uint16_t PROGMEM fn_actions[] = {
+	
+  [1] = ACTION_LAYER_TAP_TOGGLE(1),
+  
+  FF_ADD_ACTION_FUNC(ff_a_pattern_1),
+  FF_ADD_ACTION_FUNC(ff_a_pattern_2),
+  FF_ADD_ACTION_FUNC(ff_a_chord_and_cluster),
+  FF_ADD_ACTION_FUNC(ff_a_single_note_line),
+  FF_ADD_ACTION_FUNC(ff_a_single_note_line_double_key),
+  FF_ADD_ACTION_FUNC(ff_a_tap_dance),
+  FF_ADD_ACTION_FUNC(ff_a_single_chord)
+};
+
+void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
+	
+	/* Only react on keyup
+	 */
+	if(!record->event.pressed) { return; }
+
+  switch (id) {
+    case ff_a_pattern_1:
+		 //ff_led_signal();
+		 uprintf("pattern 1\n");
+		 break;
+    case ff_a_pattern_2:
+		 uprintf("pattern 2\n");
+		 //ff_led_flash();
+		 break;
+    case ff_a_chord_and_cluster:
+		 uprintf("chord and cluster\n");
+		// ff_led_superflash();
+		 break;
+    case ff_a_single_note_line:
+		 uprintf("noteline\n");
+		 //ff_led_superflash();
+		 break;
+    case ff_a_single_note_line_double_key:
+		 uprintf("single note line with double tap\n");
+		// ff_led_superflash();
+		 break;
+    case ff_a_tap_dance:
+		 uprintf("tap dance\n");
+		 //ff_led_superflash();
+		 break;
+    case ff_a_single_chord:
+		 uprintf("isolated chord\n");
+		 //ff_led_superflash();
+		 break;
+  }
+}
+
+// leaving this in place for compatibilty with old keymaps cloned and re-compiled.
+const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
+{
+      switch(id) {
+        case 0:
+        if (record->event.pressed) {
+          SEND_STRING (QMK_KEYBOARD "/" QMK_KEYMAP " @ " QMK_VERSION);
+        }
+        break;
+      }
+    return MACRO_NONE;
+};
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+	
+// 	PPG_PRINTF("process_record_user\n");
+// 	PPG_PRINTF("   keycode: %d\n", keycode);
+// 	PPG_PRINTF("   pressed: %d\n", record->event.pressed);
+// 	PPG_PRINTF("   row: %d\n", record->event.key.row);
+// 	PPG_PRINTF("   col: %d\n", record->event.key.col);is
+	
+	
+// 	uprintf("The input: %u\n", PPG_QMK_INPUT_FROM_KEYPOS(KEY_52));	 
+// 	
+// 	
+// 	
+// 	
+// 	
+// 	
+// 	
+//   
+// #define FF_PRINT_FUNC(F__) 
+// 	uprintf(#F__ " = %u\n", F(F__));
+// 	
+//   FF_PRINT_FUNC(ff_a_pattern_1)
+//   FF_PRINT_FUNC(ff_a_pattern_2)
+//   FF_PRINT_FUNC(ff_a_chord_and_cluster)
+//   FF_PRINT_FUNC(ff_a_single_note_line)
+//   FF_PRINT_FUNC(ff_a_single_note_line_double_key)
+//   FF_PRINT_FUNC(ff_a_tap_dance)
+//   FF_PRINT_FUNC(ff_a_single_chord)
+	
+	bool key_processed = ppg_qmk_process_event(keycode, record);
+	
+	if(key_processed) { return false; }
+
+
+  switch (keycode) {
+    // dynamically generate these.
+    case EPRM:
+      if (record->event.pressed) {
+        eeconfig_init();
+      }
+      return false;
+      break;
+    case VRSN:
+      if (record->event.pressed) {
+        SEND_STRING (QMK_KEYBOARD "/" QMK_KEYMAP " @ " QMK_VERSION);
+      }
+      return false;
+      break;
+    case RGB_SLD:
+      if (record->event.pressed) {
+        rgblight_mode(1);
+      }
+      return false;
+      break;
+    
+  }
+  return true;
+}
+
+void the_cluster_callback(void *user_data)
+{
+	PPG_PRINTF("cluster callback: %d\n", (size_t)user_data);
+}
+
+
+#ifdef PPG_QMK_ERGODOX
+// Note: The following method depens on the 
+//       enum PPG_QMK_N_Inputs that is defined 
+//       by PPG_QMK_INIT_DATA_STRUCTURES
+//
+void ff_signal_n_inputs(void)
+{
+	wait_ms(1000);
+	for(uint8_t i = 0; i < PPG_QMK_N_Inputs; ++i) {
+		ppg_qmk_led_flash();
+		wait_ms(200);
+	}
+}
+#endif // PPG_QMK_ERGODOX
 
 void init_papageno(void)
 {
@@ -410,10 +397,11 @@ void init_papageno(void)
 	//
 	ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
 	
-	ppg_qmk_set_timeout_ms(20000);
-// 	ppg_qmk_set_timeout_ms(500);
+// 	ppg_qmk_set_timeout_ms(20000);
+	ppg_qmk_set_timeout_ms(500);
 
-	PPG_PRINTF("Keycode is %u\n", F(ff_a_pattern_1));
+#if 0
+// 	PPG_PRINTF("Keycode is %u\n", F(ff_a_pattern_1));
 	
 	/* Single note line pattern: ErgoDox left inner large thumb key followed by
 	 * right inner large thumb key
@@ -431,6 +419,7 @@ void init_papageno(void)
 		)
 	);
 	
+// #if 0
 	/* Single note line pattern: ErgoDox left inner large thumb key followed by
 	 * right inner large thumb key
 	 */
@@ -500,7 +489,7 @@ void init_papageno(void)
 		)
 	);
 	
-	/* Triple tap on q (QWERTY)
+	/* Triple tap on w (QWERTY)
 	 */
 	ppg_tap_dance(
 		ff_layer_base,
@@ -519,6 +508,8 @@ void init_papageno(void)
 		)
 	);
 	
+#endif
+	
 	/* Single chord of left thumb inner large key, right thumb both large keys
 	 */
 	ppg_chord(
@@ -532,6 +523,8 @@ void init_papageno(void)
 			PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)
 		)
 	);
+	
+#if 0
 	
 	/* A single cluster of j, k and l (QWERTY).
 	 */
@@ -547,13 +540,6 @@ void init_papageno(void)
 			PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
 		)
 	);
-	
-   #define FF_BACK_LINE_1(S) PPG_QMK_KEYPOS_HEX(4, 2, S)
-   #define FF_BACK_LINE_2(S) PPG_QMK_KEYPOS_HEX(4, 3, S)
-   #define FF_BACK_LINE_3(S) PPG_QMK_KEYPOS_HEX(4, 4, S)
-   #define FF_BACK_LINE_4(S) PPG_QMK_KEYPOS_HEX(4, 9, S)
-   #define FF_BACK_LINE_5(S) PPG_QMK_KEYPOS_HEX(4, A, S)
-   #define FF_BACK_LINE_6(S) PPG_QMK_KEYPOS_HEX(4, B, S)
 	
 	/* A pattern to switch to the aux layer.
 	 */
@@ -571,8 +557,13 @@ void init_papageno(void)
 				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_6)
 			)
 	);
+#endif
 	
 	ppg_global_compile();
+	
+// 	#ifdef PPG_QMK_ERGODOX
+// 	ff_signal_n_inputs();
+// 	#endif
 
 	PPG_PRINTF("Setup completed\n");
 }
