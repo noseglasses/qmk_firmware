@@ -19,23 +19,23 @@ enum custom_keycodes {
 };
 
 enum ff_layers {
-	ff_layer_norman = 0,
-	ff_layer_symbol,
-	ff_layer_media,
-	ff_layer_qwerty/*,
-	ff_layer_aux*/
+   ff_layer_norman = 0,
+   ff_layer_symbol,
+   ff_layer_media,
+   ff_layer_qwerty/*,
+   ff_layer_aux*/
 };
 
 enum {
-	ff_layer_base = 0
+   ff_layer_base = 0
 };
 
 #define ___________ KC_TRANSPARENT
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
-	/*Norman
-	 */
+   /*Norman
+    */
   [ff_layer_norman] = KEYMAP(
       
       KC_GRAVE   ,KC_1       ,KC_2       ,KC_3       ,KC_4       ,KC_5       ,LCTL(KC_X) ,
@@ -55,10 +55,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       KC_F2      ,KC_ESCAPE  ,
       KC_PGUP    ,
       KC_PGDOWN  ,SFT_T(KC_ENTER),KC_SPACE
-	),
+   ),
 
-	/*Symbol
-	 */
+   /*Symbol
+    */
   [ff_layer_symbol] = KEYMAP(
       M(0)       ,KC_F1      ,KC_F2      ,KC_F3      ,KC_F4      ,KC_F5      ,___________,
       ___________,KC_EXLM    ,KC_AT      ,KC_LCBR    ,KC_RCBR    ,KC_PIPE    ,KC_LALT    ,
@@ -78,10 +78,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       KC_F2      ,KC_ESCAPE  ,
       KC_PGUP,
       KC_PGDOWN  ,KC_ENTER   ,KC_SPACE
-	),
+   ),
 
-	/* Media
-	 */
+   /* Media
+    */
   [ff_layer_media] = KEYMAP(
       ___________,___________,___________,___________,___________,___________,___________,
       ___________,___________,___________,KC_MS_UP   ,___________,___________,___________,
@@ -101,10 +101,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       ___________,
       ___________,___________,KC_WWW_BACK),
 
-	/* QWERTY
-	 */
+   /* QWERTY
+    */
   [ff_layer_qwerty] = KEYMAP(
-      KC_GRAVE   ,KC_1       ,KC_2        ,KC_3      ,KC_4       ,KC_5       ,___________,	
+      KC_GRAVE   ,KC_1       ,KC_2        ,KC_3      ,KC_4       ,KC_5       ,___________,   
       KC_EQUAL   ,KC_Q       ,KC_W        ,KC_E      ,KC_R       ,KC_T       ,___________,
       KC_DELETE  ,KC_A       ,KC_S        ,KC_D      ,KC_F       ,KC_G       ,
       KC_LSHIFT  ,KC_Z       ,KC_X        ,KC_C      ,KC_V       ,KC_B       ,___________,
@@ -121,13 +121,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       ___________,KC_ESCAPE,
       KC_PGUP    ,
       KC_PGDOWN  ,KC_ENTER ,KC_SPACE
-	),
-	
-// 	[ff_layer_aux] = KEYMAP(
-//       ___________,___________,___________,___________,___________,___________,___________,	
-//       ___________,___________,___________,___________,___________,___________,___________,	
+   ),
+   
+//    [ff_layer_aux] = KEYMAP(
+//       ___________,___________,___________,___________,___________,___________,___________,   
+//       ___________,___________,___________,___________,___________,___________,___________,   
 //       ___________,___________,___________,___________,___________,___________,
-//       ___________,___________,___________,___________,___________,___________,___________,	
+//       ___________,___________,___________,___________,___________,___________,___________,   
 //       ___________,___________,___________,___________,___________,
 //                                                                               ___________,___________,
 //                                                                                           ___________,
@@ -141,7 +141,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 //       ___________,___________,
 //       ___________,
 //       ___________,___________,___________
-// 	),
+//    ),
 };
 
 
@@ -202,50 +202,50 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 //            - Counters must start from zero, be contiguous and unique
 //
 #define PPG_QMK_KEY_SET(OP) \
-	OP(KEY_52) \
-	OP(KEY_5B) \
-	OP(KEY_5A) \
-	\
-	OP(CHORD_KEY_1) \
-	OP(CHORD_KEY_2) \
-	OP(CHORD_KEY_3) \
-	\
-	OP(CLUSTER_KEY_1) \
-	OP(CLUSTER_KEY_2) \
-	OP(CLUSTER_KEY_3) \
-	\
-	OP(SINGLE_NOTE_LINE_KEY_1) \
-	OP(SINGLE_NOTE_LINE_KEY_2) \
-	OP(SINGLE_NOTE_LINE_KEY_3) \
-	\
-	OP(PPG_ABORT_KEY) \
-	\
-	OP(FF_BACK_LINE_1) \
-	OP(FF_BACK_LINE_2) \
-	OP(FF_BACK_LINE_3) \
-	OP(FF_BACK_LINE_4) \
-	OP(FF_BACK_LINE_5) \
-	OP(FF_BACK_LINE_6)
-	
+   OP(KEY_52) \
+   OP(KEY_5B) \
+   OP(KEY_5A) \
+   \
+   OP(CHORD_KEY_1) \
+   OP(CHORD_KEY_2) \
+   OP(CHORD_KEY_3) \
+   \
+   OP(CLUSTER_KEY_1) \
+   OP(CLUSTER_KEY_2) \
+   OP(CLUSTER_KEY_3) \
+   \
+   OP(SINGLE_NOTE_LINE_KEY_1) \
+   OP(SINGLE_NOTE_LINE_KEY_2) \
+   OP(SINGLE_NOTE_LINE_KEY_3) \
+   \
+   OP(PPG_ABORT_KEY) \
+   \
+   OP(FF_BACK_LINE_1) \
+   OP(FF_BACK_LINE_2) \
+   OP(FF_BACK_LINE_3) \
+   OP(FF_BACK_LINE_4) \
+   OP(FF_BACK_LINE_5) \
+   OP(FF_BACK_LINE_6)
+   
 // Initialize Papageno data structures for qmk
 //
 PPG_QMK_INIT_DATA_STRUCTURES
 
 enum {
-	ff_a_pattern_1 = 2,
-	ff_a_pattern_2,
-	ff_a_chord_and_cluster,
-	ff_a_single_note_line,
-	ff_a_single_note_line_double_key,
-	ff_a_tap_dance,
-	ff_a_single_chord,
-	ff_a_single_cluster
+   ff_a_pattern_1 = 2,
+   ff_a_pattern_2,
+   ff_a_chord_and_cluster,
+   ff_a_single_note_line,
+   ff_a_single_note_line_double_key,
+   ff_a_tap_dance,
+   ff_a_single_chord,
+   ff_a_single_cluster
 };
 
 #define FF_ADD_ACTION_FUNC(S) [S] = ACTION_FUNCTION(S)
 
 const uint16_t PROGMEM fn_actions[] = {
-	
+   
   [1] = ACTION_LAYER_TAP_TOGGLE(1),
   
   FF_ADD_ACTION_FUNC(ff_a_pattern_1),
@@ -258,40 +258,40 @@ const uint16_t PROGMEM fn_actions[] = {
 };
 
 void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
-	
-	/* Only react on keyup
-	 */
-	if(!record->event.pressed) { return; }
+   
+   /* Only react on keyup
+    */
+   if(!record->event.pressed) { return; }
 
   switch (id) {
     case ff_a_pattern_1:
-		 //ff_led_signal();
-		 uprintf("pattern 1\n");
-		 break;
+       //ff_led_signal();
+       uprintf("pattern 1\n");
+       break;
     case ff_a_pattern_2:
-		 uprintf("pattern 2\n");
-		 //ff_led_flash();
-		 break;
+       uprintf("pattern 2\n");
+       //ff_led_flash();
+       break;
     case ff_a_chord_and_cluster:
-		 uprintf("chord and cluster\n");
-		// ff_led_superflash();
-		 break;
+       uprintf("chord and cluster\n");
+      // ff_led_superflash();
+       break;
     case ff_a_single_note_line:
-		 uprintf("noteline\n");
-		 //ff_led_superflash();
-		 break;
+       uprintf("noteline\n");
+       //ff_led_superflash();
+       break;
     case ff_a_single_note_line_double_key:
-		 uprintf("single note line with double tap\n");
-		// ff_led_superflash();
-		 break;
+       uprintf("single note line with double tap\n");
+      // ff_led_superflash();
+       break;
     case ff_a_tap_dance:
-		 uprintf("tap dance\n");
-		 //ff_led_superflash();
-		 break;
+       uprintf("tap dance\n");
+       //ff_led_superflash();
+       break;
     case ff_a_single_chord:
-		 uprintf("isolated chord\n");
-		 //ff_led_superflash();
-		 break;
+       uprintf("isolated chord\n");
+       //ff_led_superflash();
+       break;
   }
 }
 
@@ -309,26 +309,26 @@ const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-	
-// 	PPG_PRINTF("process_record_user\n");
-// 	PPG_PRINTF("   keycode: %d\n", keycode);
-// 	PPG_PRINTF("   pressed: %d\n", record->event.pressed);
-// 	PPG_PRINTF("   row: %d\n", record->event.key.row);
-// 	PPG_PRINTF("   col: %d\n", record->event.key.col);is
-	
-	
-// 	uprintf("The input: %u\n", PPG_QMK_INPUT_FROM_KEYPOS(KEY_52));	 
-// 	
-// 	
-// 	
-// 	
-// 	
-// 	
-// 	
+   
+//    PPG_PRINTF("process_record_user\n");
+//    PPG_PRINTF("   keycode: %d\n", keycode);
+//    PPG_PRINTF("   pressed: %d\n", record->event.pressed);
+//    PPG_PRINTF("   row: %d\n", record->event.key.row);
+//    PPG_PRINTF("   col: %d\n", record->event.key.col);is
+   
+   
+//    uprintf("The input: %u\n", PPG_QMK_INPUT_FROM_KEYPOS(KEY_52));  
+//    
+//    
+//    
+//    
+//    
+//    
+//    
 //   
 // #define FF_PRINT_FUNC(F__) 
-// 	uprintf(#F__ " = %u\n", F(F__));
-// 	
+//    uprintf(#F__ " = %u\n", F(F__));
+//    
 //   FF_PRINT_FUNC(ff_a_pattern_1)
 //   FF_PRINT_FUNC(ff_a_pattern_2)
 //   FF_PRINT_FUNC(ff_a_chord_and_cluster)
@@ -336,10 +336,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 //   FF_PRINT_FUNC(ff_a_single_note_line_double_key)
 //   FF_PRINT_FUNC(ff_a_tap_dance)
 //   FF_PRINT_FUNC(ff_a_single_chord)
-	
-	bool key_processed = ppg_qmk_process_event(keycode, record);
-	
-	if(key_processed) { return false; }
+   
+   bool key_processed = ppg_qmk_process_event(keycode, record);
+   
+   if(key_processed) { return false; }
 
 
   switch (keycode) {
@@ -369,7 +369,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void the_cluster_callback(void *user_data)
 {
-	PPG_PRINTF("cluster callback: %d\n", (size_t)user_data);
+   PPG_PRINTF("cluster callback: %d\n", (size_t)user_data);
 }
 
 
@@ -380,202 +380,202 @@ void the_cluster_callback(void *user_data)
 //
 void ff_signal_n_inputs(void)
 {
-	wait_ms(1000);
-	for(uint8_t i = 0; i < PPG_QMK_N_Inputs; ++i) {
-		ppg_qmk_led_flash();
-		wait_ms(200);
-	}
+   wait_ms(1000);
+   for(uint8_t i = 0; i < PPG_QMK_N_Inputs; ++i) {
+      ppg_qmk_led_flash();
+      wait_ms(200);
+   }
 }
 #endif // PPG_QMK_ERGODOX
 
 void init_papageno(void)
 {
-	PPG_QMK_INIT
-	
-	// When the abort key is pressed, pattern recognition is aborted
-	// the same as if timeout had occured.
-	//
-	ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
-	
-// 	ppg_qmk_set_timeout_ms(20000);
-	ppg_qmk_set_timeout_ms(500);
+   PPG_QMK_INIT
+   
+   // When the abort key is pressed, pattern recognition is aborted
+   // the same as if timeout had occured.
+   //
+   ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
+   
+//    ppg_qmk_set_timeout_ms(20000);
+   ppg_qmk_set_timeout_ms(500);
 
 #if 0
-// 	PPG_PRINTF("Keycode is %u\n", F(ff_a_pattern_1));
-	
-	/* Single note line pattern: ErgoDox left inner large thumb key followed by
-	 * right inner large thumb key
-	 */
-	ppg_pattern(
-		ff_layer_base, /* Layer id */
-		PPG_TOKENS(
-			ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_52)),
-			ppg_token_set_action(
-				ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B)),
-				PPG_QMK_ACTION_KEYCODE(  
-					F(ff_a_pattern_1)
-				)
-			)
-		)
-	);
-	
+//    PPG_PRINTF("Keycode is %u\n", F(ff_a_pattern_1));
+   
+   /* Single note line pattern: ErgoDox left inner large thumb key followed by
+    * right inner large thumb key
+    */
+   ppg_pattern(
+      ff_layer_base, /* Layer id */
+      PPG_TOKENS(
+         ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_52)),
+         ppg_token_set_action(
+            ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B)),
+            PPG_QMK_ACTION_KEYCODE(  
+               F(ff_a_pattern_1)
+            )
+         )
+      )
+   );
+   
 // #if 0
-	/* Single note line pattern: ErgoDox left inner large thumb key followed by
-	 * right inner large thumb key
-	 */
-	ppg_pattern(
-		ff_layer_base, /* Layer id */
-		PPG_TOKENS(
-			ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_52)),
-			ppg_token_set_action(
-				ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)),
-				PPG_QMK_ACTION_KEYCODE(
-					F(ff_a_pattern_2)
-				)
-			)
-		)
-	);
-			
-	/* Pattern specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
-	 * j, k and l (QWERTY).
-	 */
-	ppg_pattern(
-		ff_layer_base, /* Layer id */
-		PPG_TOKENS(
-			PPG_CHORD_CREATE(
-				PPG_QMK_INPUT_FROM_KEYPOS(CHORD_KEY_1),
-				PPG_QMK_INPUT_FROM_KEYPOS(CHORD_KEY_2),
-				PPG_QMK_INPUT_FROM_KEYPOS(CHORD_KEY_3)
-			),
-			ppg_token_set_action(
-				PPG_CLUSTER_CREATE(
-					PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_1),
-					PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_2),
-					PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
-				),
-				PPG_QMK_ACTION_KEYCODE(
-					F(ff_a_chord_and_cluster)
-				)
-			)
-		)
-	);
-	
-	/* A single note line of w, e and r (QWERTY).
-	 */
-	ppg_single_note_line(
-		ff_layer_base,
-		PPG_QMK_ACTION_KEYCODE(
-			F(ff_a_single_note_line)
-		),
-		PPG_QMK_KEYS(
-			PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1),
-			PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_2),
-			PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_3)
-		)
-	);
+   /* Single note line pattern: ErgoDox left inner large thumb key followed by
+    * right inner large thumb key
+    */
+   ppg_pattern(
+      ff_layer_base, /* Layer id */
+      PPG_TOKENS(
+         ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_52)),
+         ppg_token_set_action(
+            ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)),
+            PPG_QMK_ACTION_KEYCODE(
+               F(ff_a_pattern_2)
+            )
+         )
+      )
+   );
+         
+   /* Pattern specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
+    * j, k and l (QWERTY).
+    */
+   ppg_pattern(
+      ff_layer_base, /* Layer id */
+      PPG_TOKENS(
+         PPG_CHORD_CREATE(
+            PPG_QMK_INPUT_FROM_KEYPOS(CHORD_KEY_1),
+            PPG_QMK_INPUT_FROM_KEYPOS(CHORD_KEY_2),
+            PPG_QMK_INPUT_FROM_KEYPOS(CHORD_KEY_3)
+         ),
+         ppg_token_set_action(
+            PPG_CLUSTER_CREATE(
+               PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_1),
+               PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_2),
+               PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
+            ),
+            PPG_QMK_ACTION_KEYCODE(
+               F(ff_a_chord_and_cluster)
+            )
+         )
+      )
+   );
+   
+   /* A single note line of w, e and r (QWERTY).
+    */
+   ppg_single_note_line(
+      ff_layer_base,
+      PPG_QMK_ACTION_KEYCODE(
+         F(ff_a_single_note_line)
+      ),
+      PPG_QMK_KEYS(
+         PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1),
+         PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_2),
+         PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_3)
+      )
+   );
 
-	/* Node lines can also contain the same key several times.
-	 * Here: w->w->e (QWERTY)
-	 */
-	ppg_single_note_line(
-		ff_layer_base,
-		PPG_QMK_ACTION_KEYCODE(
-			F(ff_a_single_note_line_double_key)
-		),
-		PPG_QMK_KEYS(
-			PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1),
-			PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1),
-			PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_2)
-		)
-	);
-	
-	/* Triple tap on w (QWERTY)
-	 */
-	ppg_tap_dance(
-		ff_layer_base,
-		PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1), /* The tap key */
-		PPG_Action_Fallback,
-							/* Use PPG_Action_Fall_Back if you want fall back, 
-								e.g. if something happens after three and five keypresses
-								and you want to fall back to the three keypress action
-								if only four keypresses arrived before timeout. */
-		PPG_TAP_DEFINITIONS(
-			PPG_TAP(3, 
-					  PPG_QMK_ACTION_KEYCODE(
-						  F(ff_a_tap_dance)
-					  )
-			)
-		)
-	);
-	
+   /* Node lines can also contain the same key several times.
+    * Here: w->w->e (QWERTY)
+    */
+   ppg_single_note_line(
+      ff_layer_base,
+      PPG_QMK_ACTION_KEYCODE(
+         F(ff_a_single_note_line_double_key)
+      ),
+      PPG_QMK_KEYS(
+         PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1),
+         PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1),
+         PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_2)
+      )
+   );
+   
+   /* Triple tap on w (QWERTY)
+    */
+   ppg_tap_dance(
+      ff_layer_base,
+      PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1), /* The tap key */
+      PPG_Action_Fallback,
+                     /* Use PPG_Action_Fall_Back if you want fall back, 
+                        e.g. if something happens after three and five keypresses
+                        and you want to fall back to the three keypress action
+                        if only four keypresses arrived before timeout. */
+      PPG_TAP_DEFINITIONS(
+         PPG_TAP(3, 
+                 PPG_QMK_ACTION_KEYCODE(
+                    F(ff_a_tap_dance)
+                 )
+         )
+      )
+   );
+   
 #endif
-	
-	/* Single chord of left thumb inner large key, right thumb both large keys
-	 */
-	ppg_chord(
-		ff_layer_qwerty,
-		PPG_QMK_ACTION_KEYCODE(
-			F(ff_a_single_chord)
-		),
-		PPG_QMK_KEYS(
-			PPG_QMK_INPUT_FROM_KEYPOS(KEY_52),
-			PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B),
-			PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)
-		)
-	);
-	
+   
+   /* Single chord of left thumb inner large key, right thumb both large keys
+    */
+   ppg_chord(
+      ff_layer_qwerty,
+      PPG_QMK_ACTION_KEYCODE(
+         F(ff_a_single_chord)
+      ),
+      PPG_QMK_KEYS(
+         PPG_QMK_INPUT_FROM_KEYPOS(KEY_52),
+         PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B),
+         PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)
+      )
+   );
+   
 #if 0
-	
-	/* A single cluster of j, k and l (QWERTY).
-	 */
-	ppg_cluster(
-		ff_layer_qwerty,
-		PPG_ACTION_USER_CALLBACK(
-			the_cluster_callback,
-			(void*)(size_t)13 /*user data*/
-		),
-		PPG_QMK_KEYS(
-			PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_1),
-			PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_2),
-			PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
-		)
-	);
-	
-	/* A pattern to switch to the aux layer.
-	 */
-	ppg_single_note_line(
-		ff_layer_base,
-		PPG_QMK_ACTION_KEYCODE(
-			TG(ff_layer_qwerty)
-		),
-			PPG_QMK_KEYS(
-				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_1),
-				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_2),
-				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_3),
-				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_4),
-				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_5),
-				PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_6)
-			)
-	);
+   
+   /* A single cluster of j, k and l (QWERTY).
+    */
+   ppg_cluster(
+      ff_layer_qwerty,
+      PPG_ACTION_USER_CALLBACK(
+         the_cluster_callback,
+         (void*)(size_t)13 /*user data*/
+      ),
+      PPG_QMK_KEYS(
+         PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_1),
+         PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_2),
+         PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
+      )
+   );
+   
+   /* A pattern to switch to the aux layer.
+    */
+   ppg_single_note_line(
+      ff_layer_base,
+      PPG_QMK_ACTION_KEYCODE(
+         TG(ff_layer_qwerty)
+      ),
+         PPG_QMK_KEYS(
+            PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_1),
+            PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_2),
+            PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_3),
+            PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_4),
+            PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_5),
+            PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_6)
+         )
+   );
 #endif
-	
-	ppg_global_compile();
-	
-// 	#ifdef PPG_QMK_ERGODOX
-// 	ff_signal_n_inputs();
-// 	#endif
+   
+   ppg_global_compile();
+   
+//    #ifdef PPG_QMK_ERGODOX
+//    ff_signal_n_inputs();
+//    #endif
 
-	PPG_PRINTF("Setup completed\n");
+   PPG_PRINTF("Setup completed\n");
 }
 
-void matrix_init_user(void) {	
-	init_papageno();
+void matrix_init_user(void) { 
+   init_papageno();
 }
 
 void matrix_scan_user(void) {
-	 
-// 	PPG_PRINTF("Matrix scan user\n");
-	
+    
+//    PPG_PRINTF("Matrix scan user\n");
+   
     uint8_t layer = biton32(layer_state);
 
     ergodox_board_led_off();
