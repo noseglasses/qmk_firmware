@@ -16,7 +16,7 @@
 
 #include "process_papageno.h"
 
-#ifdef PPG_QMK_ERGODOX
+#ifdef PPG_QMK_ERGODOX_EZ
 #include "ergodox.h"
 
 typedef struct {
@@ -91,12 +91,10 @@ void ppg_qmk_code_key_considered(void)
 {
    ff_safe_led_state();
    
-   wait_ms(100);
-   
    ergodox_led_all_off();
    ergodox_right_led_2_on();
    
-   wait_ms(200);
+   wait_ms(100);
    
    ff_restore_led_state();
 }
@@ -105,12 +103,10 @@ void ppg_qmk_code_key_flushed(void)
 {
    ff_safe_led_state();
    
-   wait_ms(100);
-   
    ergodox_led_all_off();
    ergodox_right_led_3_on();
    
-   wait_ms(200);
+   wait_ms(100);
    
    ff_restore_led_state();
 }
@@ -119,18 +115,16 @@ void ppg_qmk_code_key_blocked(void)
 {
    ff_safe_led_state();
    
-   wait_ms(100);
-   
    ergodox_led_all_off();
    ergodox_right_led_1_on();
    
-   wait_ms(200);
+   wait_ms(100);
    
    ff_restore_led_state();
 }
 
 
-#endif // PPG_QMK_ERGODOX
+#endif // PPG_QMK_ERGODOX_EZ
 
 /* This function is defined in quantum/keymap_common.c 
  */
@@ -144,21 +138,21 @@ void ppg_qmk_process_event_callback(
    //
    if(event->flags & PPG_Event_Considered) {
       
-      #ifdef PPG_QMK_ERGODOX
+      #ifdef PPG_QMK_ERGODOX_EZ
       ppg_qmk_code_key_blocked();
       #endif
       
       return; 
    }
    
-   #ifdef PPG_QMK_ERGODOX
+   #ifdef PPG_QMK_ERGODOX_EZ
    ppg_qmk_code_key_flushed();
    #endif
    
    keypos_t key = ppg_qmk_keypos_lookup[event->input];
    
 //    uprintf("Event input %d\n", event->input);
-//    uprintf("Flushing key row %d, col %d\n", key.row, key.col);
+//    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
    
   uint16_t keycode;
    
@@ -186,11 +180,9 @@ void ppg_qmk_process_event_callback(
       uint16_t configured_keycode = keycode_config(keycode);
    
    if(event->flags & PPG_Event_Active) {
-//       register_code16(keycode);
       register_code16(configured_keycode);
    }
    else {
-//       unregister_code16(keycode);
       unregister_code16(configured_keycode);
    }
 }
@@ -210,12 +202,7 @@ void ppg_qmk_process_keycode(void *user_data) {
    uprintf("keycode %u\n", keycode);
    
    if(keycode != 0) {
-      
-//       PPG_LOG("Passing keycode %u to qmk system\n", keycode);
-//       
-//       register_code(keycode);
-//       unregister_code(keycode);
-      
+
       /* Construct a dummy record
       */
       keyrecord_t record;
@@ -262,7 +249,7 @@ bool ppg_qmk_process_event(
    
    if(PPG_QMK_Empty_Input == input) { return false; }
    
-   #ifdef PPG_QMK_ERGODOX
+   #ifdef PPG_QMK_ERGODOX_EZ
    ppg_qmk_code_key_considered();
    #endif
    
@@ -311,7 +298,7 @@ int8_t ppg_qmk_time_comparison(
 
 void ppg_qmk_signal_callback(PPG_Slot_Id slot_id, void *user_data)
 {
-   uprintf("slot %u\n", slot_id  );
+//    uprintf("slot %u\n", slot_id  );
    
    switch(slot_id) {
       case PPG_On_Abort:
@@ -325,7 +312,7 @@ void ppg_qmk_signal_callback(PPG_Slot_Id slot_id, void *user_data)
       default:
          return;
    }
-   #ifdef PPG_QMK_ERGODOX
+   #ifdef PPG_QMK_ERGODOX_EZ
    ppg_qmk_code_key_blocked();
    #endif
 }

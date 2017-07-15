@@ -265,35 +265,26 @@ void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
    if(!record->event.pressed) { return; }
 
   switch (id) {
-// #if 0
     case ff_a_pattern_1:
-       //ff_led_signal();
        uprintf("pattern 1\n");
        break;
     case ff_a_pattern_2:
        uprintf("pattern 2\n");
-       //ff_led_flash();
        break;
     case ff_a_chord_and_cluster:
        uprintf("chord and cluster\n");
-      // ff_led_superflash();
        break;
     case ff_a_single_note_line:
        uprintf("noteline\n");
-       //ff_led_superflash();
        break;
     case ff_a_single_note_line_double_key:
        uprintf("single note line with double tap\n");
-      // ff_led_superflash();
        break;
     case ff_a_tap_dance:
        uprintf("tap dance\n");
-       //ff_led_superflash();
        break;
-// #endif
     case ff_a_single_chord:
        uprintf("isolated chord\n");
-       //ff_led_superflash();
        break;
   }
 }
@@ -318,28 +309,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 //    PPG_LOG("   pressed: %d\n", record->event.pressed);
 //    PPG_LOG("   row: %d\n", record->event.key.row);
 //    PPG_LOG("   col: %d\n", record->event.key.col);is
-   
-   
-//    uprintf("The input: %u\n", PPG_QMK_INPUT_FROM_KEYPOS(KEY_52));  
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//   
-// #define FF_PRINT_FUNC(F__) 
-//    uprintf(#F__ " = %u\n", F(F__));
-//    
-//   FF_PRINT_FUNC(ff_a_pattern_1)
-//   FF_PRINT_FUNC(ff_a_pattern_2)
-//   FF_PRINT_FUNC(ff_a_chord_and_cluster)
-//   FF_PRINT_FUNC(ff_a_single_note_line)
-//   FF_PRINT_FUNC(ff_a_single_note_line_double_key)
-//   FF_PRINT_FUNC(ff_a_tap_dance)
-//   FF_PRINT_FUNC(ff_a_single_chord)
-   
+
    bool key_processed = ppg_qmk_process_event(keycode, record);
    
    if(key_processed) { return false; }
@@ -375,7 +345,6 @@ void the_cluster_callback(void *user_data)
    uprintf("cluster callback: %d\n", (size_t)user_data);
 }
 
-
 #ifdef PPG_QMK_ERGODOX
 // Note: The following method depens on the 
 //       enum PPG_QMK_N_Inputs that is defined 
@@ -400,11 +369,8 @@ void init_papageno(void)
    //
    ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
    
-   ppg_qmk_set_timeout_ms(20000);
-//    ppg_qmk_set_timeout_ms(500);
-   
-#if 0
-//    PPG_LOG("Keycode is %u\n", F(ff_a_pattern_1));
+//    ppg_qmk_set_timeout_ms(20000);
+   ppg_qmk_set_timeout_ms(500);
    
    /* Single note line pattern: ErgoDox left inner large thumb key followed by
     * right inner large thumb key
@@ -422,7 +388,6 @@ void init_papageno(void)
       )
    );
    
-// #if 0
    /* Single note line pattern: ErgoDox left inner large thumb key followed by
     * right inner large thumb key
     */
@@ -541,9 +506,6 @@ void init_papageno(void)
       )
    );
    
-#endif
-// #if 0
-   
    /* A pattern to switch to the aux layer.
     */
    ppg_single_note_line(
@@ -560,7 +522,6 @@ void init_papageno(void)
             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_6)
          )
    );
-// #endif
    
    ppg_global_compile();
    

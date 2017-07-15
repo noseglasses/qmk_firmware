@@ -25,7 +25,7 @@
  * use keyboard matix coordinates as well as qmk keycodes to define keys (notes in Papageno jargon).
  * 
  * Key press and release actions are passed to Papageno.
- * Use the macro PPG_QMK_MATRIX_KEY_HEX to specify a physical key with respect to its
+ * Use the macro PPG_QMK_INPUT_FROM_KEYPOS to specify a physical key with respect to its
  * hexadecimal row and column ids or the macro PPG_QMK_KEYCODE_KEY to specify a qmk keycode
  * as key identifier.
  * 
@@ -37,7 +37,10 @@
 #include "quantum.h"
 #include "tmk_core/common/keyboard.h"
 
-#define PPG_QMK_ERGODOX
+// Enable the flag below if you want to compile 
+// led effects for ErgoDox EZ
+//
+// #define PPG_QMK_ERGODOX_EZ
 
 extern keypos_t ppg_qmk_keypos_lookup[];
 
@@ -75,7 +78,8 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout);
  */
 void ppg_qmk_flush_key_events(void);
 
-#ifdef PPG_QMK_ERGODOX
+#ifdef PPG_QMK_ERGODOX_EZ
+
 // Methods for LED-signals (e.g. to use on ErgoDox EZ)
 //
 void ppg_qmk_led_signal(void);
@@ -111,11 +115,6 @@ enum { PPG_QMK_Empty_Input = (PPG_Input_Id)-1 };
 
 #define PPG_QMK_KEYPOS_HEX(COL_HEX, ROW_HEX, S___) \
    S___(COL_HEX, ROW_HEX)
-
-// #define PPG_QMK_MATRIX_KEY_HEX(COL_HEX, ROW_HEX) 
-//    (PPG_Input_Id) { 
-//       .input_id = ppg_qmk_create_key_data(PPG_QMK_KEYPOS_HEX(COL_HEX, ROW_HEX), 0) 
-//    }
    
 // #define PPG_QMK_KEYCODE_KEY(KK) 
 //    (PPG_Input) { 
@@ -163,12 +162,7 @@ __NL__      sizeof(ppg_qmk_keypos_lookup)/sizeof(keypos_t));
    
 #define PPG_QMK_CONVERT_TO_CASE_LABEL(COL_HEX, ROW_HEX) \
    256*0x##ROW_HEX + 0x##COL_HEX
-   
-/** @param KEYPOS_ALIAS An alias that is define by the user 
- *            that consumes a parameter S that is 
- *            the name of a macro function that consumes
- *            two parameters ROW and COL
- */
+
 #define PPG_QMK_KEYPOS_CASE_LABEL(KEYPOS_ALIAS) \
 __NL__   case KEYPOS_ALIAS(PPG_QMK_CONVERT_TO_CASE_LABEL): \
 __NL__      return __COUNTER__ - counter_offset - 1; \
