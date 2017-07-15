@@ -169,7 +169,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 // Define a bunch of key positions. 
 //
-// Important: Every define must feature the auxiliary macro parameter S
+// Important: Every key macro must feature 
+//            the auxiliary macro parameter S
 //
 #define KEY_52(S) PPG_QMK_KEYPOS_HEX(5, 2, S)
 #define KEY_5B(S) PPG_QMK_KEYPOS_HEX(5, B, S)
@@ -264,6 +265,7 @@ void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
    if(!record->event.pressed) { return; }
 
   switch (id) {
+// #if 0
     case ff_a_pattern_1:
        //ff_led_signal();
        uprintf("pattern 1\n");
@@ -288,6 +290,7 @@ void action_function(keyrecord_t *record, uint8_t id, uint8_t opt) {
        uprintf("tap dance\n");
        //ff_led_superflash();
        break;
+// #endif
     case ff_a_single_chord:
        uprintf("isolated chord\n");
        //ff_led_superflash();
@@ -310,11 +313,11 @@ const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
    
-//    PPG_PRINTF("process_record_user\n");
-//    PPG_PRINTF("   keycode: %d\n", keycode);
-//    PPG_PRINTF("   pressed: %d\n", record->event.pressed);
-//    PPG_PRINTF("   row: %d\n", record->event.key.row);
-//    PPG_PRINTF("   col: %d\n", record->event.key.col);is
+//    PPG_LOG("process_record_user\n");
+//    PPG_LOG("   keycode: %d\n", keycode);
+//    PPG_LOG("   pressed: %d\n", record->event.pressed);
+//    PPG_LOG("   row: %d\n", record->event.key.row);
+//    PPG_LOG("   col: %d\n", record->event.key.col);is
    
    
 //    uprintf("The input: %u\n", PPG_QMK_INPUT_FROM_KEYPOS(KEY_52));  
@@ -369,7 +372,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void the_cluster_callback(void *user_data)
 {
-   PPG_PRINTF("cluster callback: %d\n", (size_t)user_data);
+   uprintf("cluster callback: %d\n", (size_t)user_data);
 }
 
 
@@ -397,11 +400,11 @@ void init_papageno(void)
    //
    ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
    
-//    ppg_qmk_set_timeout_ms(20000);
-   ppg_qmk_set_timeout_ms(500);
-
+   ppg_qmk_set_timeout_ms(20000);
+//    ppg_qmk_set_timeout_ms(500);
+   
 #if 0
-//    PPG_PRINTF("Keycode is %u\n", F(ff_a_pattern_1));
+//    PPG_LOG("Keycode is %u\n", F(ff_a_pattern_1));
    
    /* Single note line pattern: ErgoDox left inner large thumb key followed by
     * right inner large thumb key
@@ -508,12 +511,10 @@ void init_papageno(void)
       )
    );
    
-#endif
-   
    /* Single chord of left thumb inner large key, right thumb both large keys
     */
    ppg_chord(
-      ff_layer_qwerty,
+      ff_layer_base,
       PPG_QMK_ACTION_KEYCODE(
          F(ff_a_single_chord)
       ),
@@ -524,12 +525,11 @@ void init_papageno(void)
       )
    );
    
-#if 0
    
    /* A single cluster of j, k and l (QWERTY).
     */
    ppg_cluster(
-      ff_layer_qwerty,
+      ff_layer_base,
       PPG_ACTION_USER_CALLBACK(
          the_cluster_callback,
          (void*)(size_t)13 /*user data*/
@@ -540,6 +540,9 @@ void init_papageno(void)
          PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
       )
    );
+   
+#endif
+// #if 0
    
    /* A pattern to switch to the aux layer.
     */
@@ -557,7 +560,7 @@ void init_papageno(void)
             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_6)
          )
    );
-#endif
+// #endif
    
    ppg_global_compile();
    
@@ -565,7 +568,7 @@ void init_papageno(void)
 //    ff_signal_n_inputs();
 //    #endif
 
-   PPG_PRINTF("Setup completed\n");
+//    PPG_LOG("Setup completed\n");
 }
 
 void matrix_init_user(void) { 
@@ -574,7 +577,7 @@ void matrix_init_user(void) {
 
 void matrix_scan_user(void) {
     
-//    PPG_PRINTF("Matrix scan user\n");
+//    PPG_LOG("Matrix scan user\n");
    
     uint8_t layer = biton32(layer_state);
 

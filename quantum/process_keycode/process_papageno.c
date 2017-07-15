@@ -180,7 +180,7 @@ void ppg_qmk_process_event_callback(
   #endif
     keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
             
-   PPG_PRINTF("Issuing keycode %u, pressed = %u\n", keycode, event->flags & PPG_Event_Active);
+   PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
    
    
       uint16_t configured_keycode = keycode_config(keycode);
@@ -211,7 +211,7 @@ void ppg_qmk_process_keycode(void *user_data) {
    
    if(keycode != 0) {
       
-//       PPG_PRINTF("Passing keycode %u to qmk system\n", keycode);
+//       PPG_LOG("Passing keycode %u to qmk system\n", keycode);
 //       
 //       register_code(keycode);
 //       unregister_code(keycode);
@@ -236,7 +236,7 @@ void ppg_qmk_process_keycode(void *user_data) {
       
       uint16_t configured_keycode = keycode_config(keycode);
       
-//       PPG_PRINTF("Passing keycode %u to qmk system\n", configured_keycode);
+//       PPG_LOG("Passing keycode %u to qmk system\n", configured_keycode);
       
       action_t action = action_for_configured_keycode(configured_keycode); 
    

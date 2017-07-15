@@ -37,7 +37,7 @@
 #include "quantum.h"
 #include "tmk_core/common/keyboard.h"
 
-// #define PPG_QMK_ERGODOX
+#define PPG_QMK_ERGODOX
 
 extern keypos_t ppg_qmk_keypos_lookup[];
 
@@ -75,11 +75,13 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout);
  */
 void ppg_qmk_flush_key_events(void);
 
+#ifdef PPG_QMK_ERGODOX
 // Methods for LED-signals (e.g. to use on ErgoDox EZ)
 //
 void ppg_qmk_led_signal(void);
 void ppg_qmk_led_flash(void);
 void ppg_qmk_led_superflash(void);
+#endif
 
 enum { PPG_QMK_Empty_Input = (PPG_Input_Id)-1 };
 
