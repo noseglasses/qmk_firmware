@@ -149,35 +149,55 @@ void ppg_qmk_process_event_callback(
    ppg_qmk_code_key_flushed();
    #endif
    
-   keypos_t key = ppg_qmk_keypos_lookup[event->input];
+   uint16_t keycode = 0;
    
-//    uprintf("Event input %d\n", event->input);
-//    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
-   
-  uint16_t keycode;
-   
-  // The following was taken from quantum.c
+   int16_t highest_keypos = ppg_qmk_highest_keypos_input();
   
-   #if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
-    /* TODO: Use store_or_get_action() or a similar function. */
-    if (!disable_action_cache) {
-      uint8_t layer;
+   // Note: Input-IDs are assigned contiguously
+   //
+   //       Input ids assigned to keypos-inputs are {0..PPG_Highest_Keypos_Input}
+   //       
+   //       Input ids assigned to keycode-inputs are {PPG_Highest_Keypos_Input + 1..PPG_Highest_Keycode_Input}
+  
+   if(event->input > highest_keypos) {
+      
+      // Map the input to a range starting from zero to be suitable
+      // for lookup in the ppg_qmk_keycode_lookup array
+      //
+      keycode = ppg_qmk_keycode_lookup[event->input - highest_keypos - 1];
+   }
+   else {
+   
+      // Keypos input-IDs already start from zero
+      //
+      keypos_t key = ppg_qmk_keypos_lookup[event->input];
+      
+   //    uprintf("Event input %d\n", event->input);
+   //    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
+      
+      
+   // The following was taken from quantum.c
+   
+      #if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
+      /* TODO: Use store_or_get_action() or a similar function. */
+      if (!disable_action_cache) {
+         uint8_t layer;
 
-      if (event->flags & PPG_Event_Active) {
-        layer = layer_switch_get_layer(key);
-        update_source_layers_cache(key, layer);
-      } else {
-        layer = read_source_layers_cache(key);
-      }
-      keycode = keymap_key_to_keycode(layer, key);
-    } else
-  #endif
-    keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
-            
-   PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
+         if (event->flags & PPG_Event_Active) {
+         layer = layer_switch_get_layer(key);
+         update_source_layers_cache(key, layer);
+         } else {
+         layer = read_source_layers_cache(key);
+         }
+         keycode = keymap_key_to_keycode(layer, key);
+      } else
+   #endif
+      keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
+               
+      PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
+   }
    
-   
-      uint16_t configured_keycode = keycode_config(keycode);
+   uint16_t configured_keycode = keycode_config(keycode);
    
    if(event->flags & PPG_Event_Active) {
       register_code16(configured_keycode);
@@ -240,14 +260,52 @@ bool ppg_qmk_process_event(
             uint16_t keycode, 
             keyrecord_t *record)
 {
-   uint8_t input = ppg_qmk_input_id_from_keypos(
-                        record->event.key.row, 
-                        record->event.key.col);
+      #define PPG_QMK_INPUT_CHECK_A \
+__NL__   ppg_qmk_input_id_from_keypos( \
+__NL__                        record->event.key.row, \
+__NL__                        record->event.key.col)
+
+      #define PPG_QMK_INPUT_CHECK_B \
+         ppg_qmk_input_id_from_keycode(keycode)
+         
+   // The default behavior is to first check it an 
+   // input is defined through the keypos of a key.
+   // If not then we check the assigned keycode.
+   //
+   // By defining PPG_QMK_REVERSE_KEYPOS_TO_KEYCODE_PRECEDENCE
+   // this order can be reversed.
+   //
+   #ifndef PPG_QMK_REVERSE_KEYPOS_TO_KEYCODE_PRECEDENCE
+      #define PPG_QMK_INPUT_CHECK_1 PPG_QMK_INPUT_CHECK_A
+      #define PPG_QMK_INPUT_CHECK_2 PPG_QMK_INPUT_CHECK_B
+   #else // PPG_QMK_REVERSE_KEYPOS_TO_KEYCODE_PRECEDENCE
+      #define PPG_QMK_INPUT_CHECK_1 PPG_QMK_INPUT_CHECK_B
+      #define PPG_QMK_INPUT_CHECK_2 PPG_QMK_INPUT_CHECK_A
+   #endif // PPG_QMK_REVERSE_KEYPOS_TO_KEYCODE_PRECEDENCE
+         
+   uint8_t input = PPG_QMK_INPUT_CHECK_1;
    
-//    uprintf("input %d, row %d, col %d\n", input, record->event.key.row, 
+   if(input == PPG_QMK_Not_An_Input) { 
+      
+      input = PPG_QMK_INPUT_CHECK_2;
+      
+      if(input == PPG_QMK_Not_An_Input) { 
+
+         // Whenever a key occurs that is not an input,
+         // we immediately abort pattern matching
+         //
+         ppg_global_abort_pattern_matching();
+         
+         return false; 
+      }
+//    else {
+//       uprintf("input %u, keycode %d\n", input, keycode);
+//    }
+   }
+// else {
+//    uprintf("input %u, row %u, col %u\n", input, record->event.key.row, 
 //                         record->event.key.col);
-   
-   if(PPG_QMK_Empty_Input == input) { return false; }
+//   }
    
    #ifdef PPG_QMK_ERGODOX_EZ
    ppg_qmk_code_key_considered();

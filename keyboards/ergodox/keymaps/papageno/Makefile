@@ -27,11 +27,32 @@ CONSOLE_ENABLE = yes
 endif
 
 OPT_DEFS += -DUSER_PRINT
-# OPT_DEFS += -DDEBUG_PAPAGENO
+
+# Context switching is not required when
+# using Papageno with qmk. Thus we disabled it.
+#
 OPT_DEFS += -DPAPAGENO_DISABLE_CONTEXT_SWITCHING
+
+# Uncomment the following line to only preprocess all files.
+# This can be helpful for detecting preprocessor macro related
+# errors by checking the pre-processed code.
+#
+# OPT_DEFS += -E
+
+# Debugging switches
+#
+# OPT_DEFS += -DDEBUG_PAPAGENO
 # OPT_DEFS += -DPAPAGENO_HAVE_ASSERTIONS
 # OPT_DEFS += -DPAPAGENO_PRINT_SELF_ENABLED=0
-# OPT_DEFS += -E
+
+# The default behavior is to first check it an 
+# input is defined through the keypos of a key.
+# If not then we check the assigned keycode.
+# 
+# By defining PPG_QMK_REVERSE_KEYPOS_TO_KEYCODE_PRECEDENCE
+# this order can be reversed.
+#
+OPT_DEFS += -DPPG_QMK_REVERSE_KEYPOS_TO_KEYCODE_PRECEDENCE
 
 KEYMAP_VERSION = $(shell \
  if [ -d "${KEYMAP_PATH}/.git" ]; then \
