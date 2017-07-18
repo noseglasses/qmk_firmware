@@ -42,9 +42,16 @@
 //
 // #define PPG_QMK_ERGODOX_EZ
 
+// The following extern entities are defined through preprocessor
+// macros in the keymap
+//
 extern keypos_t ppg_qmk_keypos_lookup[];
+extern uint16_t ppg_qmk_keycode_lookup[];
 
 extern PPG_Input_Id ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col);
+extern PPG_Input_Id ppg_qmk_input_id_from_keycode(uint16_t keycode);
+
+extern int16_t ppg_qmk_highest_keypos_input(void);
 
 void ppg_qmk_process_event_callback(   
                         PPG_Event *key_event,
@@ -87,7 +94,7 @@ void ppg_qmk_led_flash(void);
 void ppg_qmk_led_superflash(void);
 #endif
 
-enum { PPG_QMK_Empty_Input = (PPG_Input_Id)-1 };
+enum { PPG_QMK_Not_An_Input = (PPG_Input_Id)-1 };
 
 // Note: Preprocessor macro functions can be 
 //       hard to debug.
@@ -159,34 +166,91 @@ __NL__   ppg_global_set_number_of_inputs( \
 __NL__      sizeof(ppg_qmk_keypos_lookup)/sizeof(keypos_t));
    
 #define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
-   
-#define PPG_QMK_CONVERT_TO_CASE_LABEL(COL_HEX, ROW_HEX) \
+
+#define PPG_QMK_KEYPOS_ENUM(KEYPOS_NAME) \
+   PPG_##KEYPOS_NAME##_Keypos_Name
+
+#define PPG_QMK_CONVERT_KEYPOS_TO_CASE_LABEL(COL_HEX, ROW_HEX) \
+   256*0x##ROW_HEX + 0x##COL_HEX
+
+#define PPG_QMK_DEFINE_KEYPOS_ENUM(KEYPOS_NAME) \
+__NL__   enum { PPG_QMK_KEYPOS_ENUM(KEYPOS_NAME) \
+__NL__               = __COUNTER__ - PPG_Keypos_Input_Offset - 1 };
+
+#define PPG_DEFINE_KEYPOS_INPUT_ENUMS \
+__NL__   \
+__NL__   enum { PPG_Keypos_Input_Offset = __COUNTER__ }; \
+__NL__   \
+__NL__   PPG_QMK_MATRIX_POSITION_INPUTS(PPG_QMK_DEFINE_KEYPOS_ENUM) \
+__NL__   \
+__NL__   /* Careful, PPG_Highest_Keypos_Input may be negative in case that no keypos \
+__NL__      inputs are defined \
+__NL__   */ \
+__NL__   enum { PPG_Highest_Keypos_Input = (int16_t)(__COUNTER__) - PPG_Keypos_Input_Offset - 2 }; \
+__NL__   \
+__NL__   int16_t ppg_qmk_highest_keypos_input(void) { \
+__NL__      return PPG_Highest_Keypos_Input; \
+__NL__   }
+
+#define PPG_QMK_KEYCODE_ENUM(KEYCODE_ALIAS) \
+   PPG_##KEYCODE_ALIAS##_Keycode_Name
+
+#define PPG_QMK_DEFINE_KEYCODE_ENUM(KEYCODE_ALIAS) \
+__NL__   enum { PPG_QMK_KEYCODE_ENUM(KEYCODE_ALIAS) \
+__NL__               = PPG_Highest_Keypos_Input + __COUNTER__ - PPG_Keycode_Input_Offset };
+
+#define PPG_DEFINE_KEYCODE_INPUT_ENUMS \
+__NL__   \
+__NL__   enum { PPG_Keycode_Input_Offset = __COUNTER__ }; \
+__NL__   \
+__NL__   PPG_QMK_KEYCODE_INPUTS(PPG_QMK_DEFINE_KEYCODE_ENUM) \
+__NL__   \
+__NL__   /* Careful, PPG_Highest_Keycode_Input may be negative in case that no keypos and keycode \
+__NL__      inputs are defined \
+__NL__    */ \
+__NL__   enum { PPG_Highest_Keycode_Input = PPG_Highest_Keypos_Input - __COUNTER__ - PPG_Keypos_Input_Offset - 1 };
+
+#define PPG_QMK_CONVERT_KEYPOS_TO_CASE_LABEL(COL_HEX, ROW_HEX) \
    256*0x##ROW_HEX + 0x##COL_HEX
 
 #define PPG_QMK_KEYPOS_CASE_LABEL(KEYPOS_ALIAS) \
-__NL__   case KEYPOS_ALIAS(PPG_QMK_CONVERT_TO_CASE_LABEL): \
-__NL__      return __COUNTER__ - counter_offset - 1; \
+__NL__   case KEYPOS_ALIAS(PPG_QMK_CONVERT_KEYPOS_TO_CASE_LABEL): \
+__NL__      return PPG_QMK_KEYPOS_ENUM(KEYPOS_ALIAS); \
 __NL__      break;
    
 #define PPG_INIT_INPUT_ID_FROM_KEYPOS_FUNCTION \
 __NL__   \
 __NL__   PPG_Input_Id ppg_qmk_input_id_from_keypos(uint8_t row, uint8_t col) \
 __NL__   { \
-__NL__      \
-__NL__      enum { counter_offset = __COUNTER__ }; \
-__NL__      \
 __NL__      uint16_t id = 256*row + col; \
 __NL__      \
 __NL__      switch(id) { \
 __NL__         \
-__NL__         PPG_QMK_KEY_SET(PPG_QMK_KEYPOS_CASE_LABEL) \
+__NL__         PPG_QMK_MATRIX_POSITION_INPUTS(PPG_QMK_KEYPOS_CASE_LABEL) \
 __NL__      } \
 __NL__      \
-__NL__      return PPG_QMK_Empty_Input; \
+__NL__      return PPG_QMK_Not_An_Input; \
+__NL__   } 
+
+#define PPG_QMK_KEYCODE_CASE_LABEL(KEYCODE_ALIAS) \
+__NL__   case (KEYCODE_ALIAS): \
+__NL__      return PPG_QMK_KEYCODE_ENUM(KEYCODE_ALIAS); \
+__NL__      break;
+
+#define PPG_INIT_INPUT_ID_FROM_KEYCODE_FUNCTION \
+__NL__   \
+__NL__   PPG_Input_Id ppg_qmk_input_id_from_keycode(uint16_t keycode) \
+__NL__   { \
+__NL__      switch(keycode) { \
+__NL__         \
+__NL__         PPG_QMK_KEYCODE_INPUTS(PPG_QMK_KEYCODE_CASE_LABEL) \
+__NL__      } \
+__NL__      \
+__NL__      return PPG_QMK_Not_An_Input; \
 __NL__   }
-   
+  
 #define PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY_AUX(COL_HEX, ROW_HEX) \
-   /*(keypos_t)*/{ .row = 0x##ROW_HEX, .col = 0x##COL_HEX }
+   { .row = 0x##ROW_HEX, .col = 0x##COL_HEX }
    
 #define PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY(COL_HEX, ROW_HEX) \
    PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY_AUX(COL_HEX, ROW_HEX),
@@ -198,32 +262,133 @@ __NL__   }
 __NL__   \
 __NL__   keypos_t ppg_qmk_keypos_lookup[] = { \
 __NL__      \
-__NL__      PPG_QMK_KEY_SET(PPG_QMK_KEYPOS_TO_LOOKUP_ENTRY) \
+__NL__      PPG_QMK_MATRIX_POSITION_INPUTS(PPG_QMK_KEYPOS_TO_LOOKUP_ENTRY) \
 __NL__      \
 __NL__      PPG_QMK_CONVERT_TO_KEYPOS_ARRAY_ENTRY_AUX(FF, FF) \
+__NL__   };
+
+#define PPG_QMK_CONVERT_TO_KEYCODE_ARRAY_ENTRY_AUX(KEYCODE) KEYCODE
+
+#define PPG_QMK_CONVERT_TO_KEYCODE_ARRAY_ENTRY(KEYCODE) \
+   PPG_QMK_CONVERT_TO_KEYCODE_ARRAY_ENTRY_AUX(KEYCODE),
+   
+#define PPG_QMK_INIT_KEYCODE_LOOKUP \
+__NL__   \
+__NL__   uint16_t ppg_qmk_keycode_lookup[] = { \
+__NL__      \
+__NL__      PPG_QMK_KEYCODE_INPUTS(PPG_QMK_CONVERT_TO_KEYCODE_ARRAY_ENTRY) \
+__NL__      \
+__NL__      PPG_QMK_CONVERT_TO_KEYCODE_ARRAY_ENTRY_AUX((uint16_t)-1) \
 __NL__   };
    
 #define PPG_QMK_INPUT_FROM_KEYPOS_CALL(COL_HEX, ROW_HEX) \
    ppg_qmk_input_id_from_keypos(0x##ROW_HEX, 0x##COL_HEX)
    
 #define PPG_QMK_INPUT_FROM_KEYPOS(KEYPOS_ALIAS) \
-   KEYPOS_ALIAS(PPG_QMK_INPUT_FROM_KEYPOS_CALL)
+   PPG_QMK_KEYPOS_ENUM(KEYPOS_ALIAS)
+   
+#define PPG_QMK_INPUT_FROM_KEYCODE(KEYCODE_ALIAS) \
+   PPG_QMK_KEYCODE_ENUM(KEYCODE_ALIAS)
    
 #define PPG_QMK_ADD_ONE(KEYPOS_ALIAS) \
    + 1
    
 #define PPG_QMK_STORE_N_INPUTS \
 __NL__   enum { PPG_QMK_N_Inputs = 0 \
-__NL__      PPG_QMK_KEY_SET(PPG_QMK_ADD_ONE) \
+__NL__      PPG_QMK_MATRIX_POSITION_INPUTS(PPG_QMK_ADD_ONE) \
+__NL__      PPG_QMK_KEYCODE_INPUTS(PPG_QMK_ADD_ONE) \
 __NL__   };
 
 #define PPG_QMK_INIT_DATA_STRUCTURES \
 __NL__   \
+__NL__   PPG_DEFINE_KEYPOS_INPUT_ENUMS \
+__NL__   \
+__NL__   PPG_DEFINE_KEYCODE_INPUT_ENUMS \
+__NL__   \
 __NL__   PPG_INIT_INPUT_ID_FROM_KEYPOS_FUNCTION \
+__NL__   \
+__NL__   PPG_INIT_INPUT_ID_FROM_KEYCODE_FUNCTION \
 __NL__   \
 __NL__   PPG_QMK_INIT_KEYPOS_LOOKUP \
 __NL__   \
+__NL__   PPG_QMK_INIT_KEYCODE_LOOKUP \
+__NL__   \
 __NL__   PPG_QMK_STORE_N_INPUTS
-   
 
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Some macros to simplify definition of patterns
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+#include "boost/preprocessor/tuple/to_list.hpp"
+#include "boost/preprocessor/list/for_each.hpp"
+
+#define PPG_QMK_NOTE_CREATE_STANDARD_KEYPOS(r, data, elem) \
+__NL__   ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(elem)),
+   
+#define PPG_QMK_ACTION_GENERATOR_KEYCODE(KEYCODE) \
+__NL__   PPG_QMK_ACTION_KEYCODE( \
+__NL__         KEYCODE \
+__NL__   )
+
+#define PPG_QMK_PATTERN__(LAYER, ACTION, NOTE_GENERATOR, ACTION_GENERATOR, ...) \
+__NL__   ppg_token_set_action( \
+__NL__      ppg_pattern( \
+__NL__         (LAYER), \
+__NL__         PPG_TOKENS(  \
+__NL__            \
+__NL__            /* This generates a list of notes \
+__NL__             */ \
+__NL__            BOOST_PP_LIST_FOR_EACH(NOTE_GENERATOR, _, BOOST_PP_TUPLE_TO_LIST((__VA_ARGS__))) \
+__NL__         ) \
+__NL__      ), \
+__NL__      ACTION_GENERATOR(ACTION) \
+__NL__   )
+   
+#define PPG_QMK_KEYPOS_NOTE_LINE_ACTION_KEYCODE(LAYER, ACTION, ...) \
+   \
+   PPG_QMK_PATTERN__(LAYER,  \
+                     ACTION,  \
+                     PPG_QMK_NOTE_CREATE_STANDARD_KEYPOS,  \
+                     PPG_QMK_ACTION_GENERATOR_KEYCODE, \
+                     __VA_ARGS__ \
+   )
+   
+#define PPG_QMK_KEYPOS_AGGREGATE_MEMBER__(r, data, elem) \
+__NL__   PPG_QMK_INPUT_FROM_KEYPOS(elem),
+   
+#define PPG_QMK_AGGREGATE_TOKEN__(TYPE, NOTE_GENERATOR, ...) \
+   \
+__NL__    PPG_##TYPE##_CREATE( \
+__NL__      BOOST_PP_LIST_FOR_EACH(NOTE_GENERATOR, _, BOOST_PP_TUPLE_TO_LIST((__VA_ARGS__))) \
+__NL__    )
+         
+#define PPG_QMK_KEYPOS_CHORD_TOKEN(...) PPG_QMK_AGGREGATE_TOKEN__(CHORD, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, __VA_ARGS__)
+#define PPG_QMK_KEYPOS_CLUSTER_TOKEN(...) PPG_QMK_AGGREGATE_TOKEN__(CLUSTER, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, __VA_ARGS__)
+
+#define PPG_QMK_KEYPOS_KEYS(...) \
+__NL__   PPG_QMK_KEYS( \
+__NL__      BOOST_PP_LIST_FOR_EACH(PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, _, BOOST_PP_TUPLE_TO_LIST((__VA_ARGS__))) \
+__NL__      \
+__NL__      /* The list generated above ends with a comma. To fix this, \
+__NL__       * we add a NULL ptr. Papageno can cope with that. \
+__NL__       */ \
+__NL__      /*NULL*/ \
+__NL__   )
+
+#define PPG_QMK_AGGREGATE__(TYPE, LAYER, ACTION, NOTE_GENERATOR, ACTION_GENERATOR, ...) \
+\
+__NL__   ppg_##TYPE(  \
+__NL__      (LAYER), \
+__NL__      ACTION_GENERATOR( \
+__NL__         ACTION \
+__NL__      ), \
+__NL__      PPG_QMK_KEYPOS_KEYS(__VA_ARGS__) \
+__NL__   )
+
+#define PPG_QMK_KEYPOS_CHORD_ACTION_KEYCODE(LAYER, ACTION, ...) \
+   PPG_QMK_AGGREGATE__(chord, LAYER, ACTION, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, PPG_QMK_ACTION_GENERATOR_KEYCODE, __VA_ARGS__)
+  
+#define PPG_QMK_KEYPOS_CLUSTER_ACTION_KEYCODE(LAYER, ACTION, ...) \
+   PPG_QMK_AGGREGATE__(cluster, LAYER, ACTION, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, PPG_QMK_ACTION_GENERATOR_KEYCODE, __VA_ARGS__)
+                
 #endif

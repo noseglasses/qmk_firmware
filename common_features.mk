@@ -99,8 +99,12 @@ ifeq ($(strip $(TAP_DANCE_ENABLE)), yes)
 endif
 
 ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
+
     OPT_DEFS += -DPAPAGENO_ENABLE
+    
     EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/src
+    EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/3rd_party
+    
     SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c                                                                                                                    
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_aggregate_detail.c                                                                                                       
     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_context_detail.c                                                                                                         
