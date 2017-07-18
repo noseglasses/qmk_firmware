@@ -345,7 +345,7 @@ void the_cluster_callback(void *user_data)
    uprintf("cluster callback: %d\n", (size_t)user_data);
 }
 
-#ifdef PPG_QMK_ERGODOX
+#ifdef PPG_QMK_ERGODOX_EZ
 // Note: The following method depens on the 
 //       enum PPG_QMK_N_Inputs that is defined 
 //       by PPG_QMK_INIT_DATA_STRUCTURES
@@ -358,7 +358,7 @@ void ff_signal_n_inputs(void)
       wait_ms(200);
    }
 }
-#endif // PPG_QMK_ERGODOX
+#endif // PPG_QMK_ERGODOX_EZ
 
 void init_papageno(void)
 {
@@ -525,7 +525,7 @@ void init_papageno(void)
    
    ppg_global_compile();
    
-//    #ifdef PPG_QMK_ERGODOX
+//    #ifdef PPG_QMK_ERGODOX_EZ
 //    ff_signal_n_inputs();
 //    #endif
 
