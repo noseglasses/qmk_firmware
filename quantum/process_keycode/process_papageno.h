@@ -57,7 +57,7 @@ void ppg_qmk_process_event_callback(
                         PPG_Event *key_event,
                         void *user_data);
 
-void ppg_qmk_signal_callback(PPG_Slot_Id slot_id, void *user_data);
+void ppg_qmk_signal_callback(PPG_Signal_Id slot_id, void *user_data);
 
 void ppg_qmk_flush_key_events(void);
 

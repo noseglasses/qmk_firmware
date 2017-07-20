@@ -354,7 +354,7 @@ int8_t ppg_qmk_time_comparison(
    return -1;
 }
 
-void ppg_qmk_signal_callback(PPG_Slot_Id slot_id, void *user_data)
+void ppg_qmk_signal_callback(PPG_Signal_Id slot_id, void *user_data)
 {
 //    uprintf("slot %u\n", slot_id  );
    
