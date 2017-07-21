@@ -80,6 +80,8 @@ int8_t ppg_qmk_time_comparison(
 
 void ppg_qmk_set_timeout_ms(uint16_t timeout);
 
+void ppg_qmk_matrix_scan(void);
+
 /* Call this to flush key events that
  * were encountered by papageno
  */

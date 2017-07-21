@@ -670,5 +670,5 @@ void matrix_scan_user(void) {
             break;
     }
     
-    ppg_timeout_check();
+    ppg_qmk_matrix_scan();
 };
