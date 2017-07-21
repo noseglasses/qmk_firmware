@@ -354,11 +354,11 @@ int8_t ppg_qmk_time_comparison(
    return -1;
 }
 
-void ppg_qmk_signal_callback(PPG_Slot_Id slot_id, void *user_data)
+void ppg_qmk_signal_callback(PPG_Signal_Id signal_id, void *user_data)
 {
-//    uprintf("slot %u\n", slot_id  );
+//    uprintf("signal %u\n", signal_id  );
    
-   switch(slot_id) {
+   switch(signal_id) {
       case PPG_On_Abort:
          ppg_qmk_flush_events();
          break;
