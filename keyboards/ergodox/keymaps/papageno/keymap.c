@@ -167,7 +167,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     k5C,k5B,k5A
 #endif
 
-// Define a bunch of key positions that are going to be used as 
+// Define a bunch of key position alias that are going to be used to define 
 // Papageno inputs. 
 //
 // Important: Every key macro must feature 
@@ -231,12 +231,15 @@ __NL__      OP(FF_BACK_LINE_4) \
 __NL__      OP(FF_BACK_LINE_5) \
 __NL__      OP(FF_BACK_LINE_6)
 
-// Define a bunch of qmk keycodes that are going to
-// be used as Papageno inputs.
+// Define a bunch of qmk keycode alias that are going to
+// be used to define Papageno inputs.
 //
 #define FF_KC_7 KC_7
 #define FF_KC_8 KC_8
 #define FF_KC_9 KC_9
+
+#define FF_KC_A KC_A
+#define FF_KC_B KC_B
    
 // Define a set of Papageno inputs that are associated with
 // qmk keycodes.
@@ -249,7 +252,10 @@ __NL__      OP(FF_BACK_LINE_6)
 __NL__      \
 __NL__      OP(FF_KC_7) \
 __NL__      OP(FF_KC_8) \
-__NL__      OP(FF_KC_9)   
+__NL__      OP(FF_KC_9) \
+\
+__NL__      OP(FF_KC_A) \
+__NL__      OP(FF_KC_B)  
    
 // Initialize Papageno data structures for qmk
 //
@@ -393,7 +399,11 @@ void init_papageno(void)
    // When the abort key is pressed, pattern recognition is aborted
    // the same as if timeout had occured.
    //
-   ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS(PPG_ABORT_KEY));
+   ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(PPG_ABORT_KEY));
+   
+   // You could also use a keycode to define abort...
+   //
+   //ppg_global_set_abort_trigger(PPG_QMK_INPUT_FROM_KEYCODE_ALIAS(FF_KC_7));
    
 //    ppg_qmk_set_timeout_ms(20000);
    ppg_qmk_set_timeout_ms(500);
@@ -406,17 +416,19 @@ void init_papageno(void)
       F(ff_a_pattern_1), // Keycode action
       // Matrix keypos...
       KEY_52, // left inner large thumb key
+      //KEY_52, //    ...keys could also occur several times
       KEY_5B  // right inner large thumb key
    );
-   
+
+      
    // Equivalent definition ...
    //
 //    ppg_pattern(
 //       ff_layer_base,
 //       PPG_TOKENS(
-//          ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_52)),
+//          ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(KEY_52)),
 //          ppg_token_set_action(
-//             ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B)),
+//             ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(KEY_5B)),
 //             PPG_QMK_ACTION_KEYCODE(  
 //                F(ff_a_pattern_1)
 //             )
@@ -424,31 +436,15 @@ void init_papageno(void)
 //       )
 //    );
    
-   /* Single note line pattern: ErgoDox left inner large thumb key followed by
-    * right inner large thumb key
-    */
-   PPG_QMK_KEYPOS_NOTE_LINE_ACTION_KEYCODE(
-      ff_layer_base, // Layer
-      F(ff_a_pattern_2), // Keycode action
-      // Matrix keypos...
-      KEY_52, // left inner large thumb key
-      KEY_5A  // right inner large thumb key
-   );
-   
-   // Equivalent definition ...
+   // We can also define single note lines based on keycodes
    //
-//    ppg_pattern(
-//       ff_layer_base,
-//       PPG_TOKENS(
-//          ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_52)),
-//          ppg_token_set_action(
-//             ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)),
-//             PPG_QMK_ACTION_KEYCODE(
-//                F(ff_a_pattern_2)
-//             )
-//          )
-//       )
-//    );
+   PPG_QMK_KEYCODE_NOTE_LINE_ACTION_KEYCODE(
+      ff_layer_base, // Layer
+      F(ff_a_pattern_1), // Keycode action
+      // Matrix keypos...
+      FF_KC_A, // left inner large thumb key
+      FF_KC_B  // right inner large thumb key
+   );
          
    /* Pattern specification: First a chord of the s, d and f keys (QWERTY) then a cluster of
     * j, k and l (QWERTY).
@@ -461,11 +457,17 @@ void init_papageno(void)
             CHORD_KEY_2, // d (QWERTY)
             CHORD_KEY_3  // f (QWERTY)
          ),
+         
+         // Note: If necesarry, keypos- and keycode-inputs can be intermixed
+         //
+         PPG_CHORD_CREATE(
+            PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(CHORD_KEY_1),
+            PPG_QMK_INPUT_FROM_KEYCODE_ALIAS(FF_KC_A)
+         ),
          ppg_token_set_action(
-            PPG_QMK_KEYPOS_CLUSTER_TOKEN(
-               CLUSTER_KEY_1, // j (QWERTY)
-               CLUSTER_KEY_2, // k (QWERTY)
-               CLUSTER_KEY_3  // l (QWERTY)
+            PPG_QMK_KEYCODE_CLUSTER_TOKEN(
+               FF_KC_A,
+               FF_KC_B
             ),
             PPG_QMK_ACTION_KEYCODE(
                F(ff_a_chord_and_cluster)
@@ -474,40 +476,12 @@ void init_papageno(void)
       )
    );
    
-   /* A single note line of w, e and r (QWERTY).
-    */
-   ppg_single_note_line(
-      ff_layer_base,
-      PPG_QMK_ACTION_KEYCODE(
-         F(ff_a_single_note_line)
-      ),
-      PPG_QMK_KEYPOS_KEYS(
-         SINGLE_NOTE_LINE_KEY_1, // w (QWERTY)
-         SINGLE_NOTE_LINE_KEY_2, // e (QWERTY)
-         SINGLE_NOTE_LINE_KEY_3  // r (QWERTY)
-      )
-   );
-
-   /* Node lines can also contain the same key several times.
-    * Here: w->w->e (QWERTY)
-    */
-   ppg_single_note_line(
-      ff_layer_base,
-      PPG_QMK_ACTION_KEYCODE(
-         F(ff_a_single_note_line_double_key)
-      ),
-      PPG_QMK_KEYPOS_KEYS(
-         SINGLE_NOTE_LINE_KEY_1, // w (QWERTY)
-         SINGLE_NOTE_LINE_KEY_1, // w (QWERTY)
-         SINGLE_NOTE_LINE_KEY_2  // e (QWERTY)
-      )
-   );
-   
    /* Triple tap on w (QWERTY)
     */
    ppg_tap_dance(
       ff_layer_base,
-      PPG_QMK_INPUT_FROM_KEYPOS(SINGLE_NOTE_LINE_KEY_1), /* The tap key */
+      PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(SINGLE_NOTE_LINE_KEY_1), /* The tap key
+         could also be a keycode using PPG_QMK_INPUT_FROM_KEYCODE_ALIAS */
       PPG_TAP_DEFINITIONS(
          PPG_TAP(
             3, 
@@ -518,42 +492,9 @@ void init_papageno(void)
       )
    );
    
-   /* Single chord of left thumb inner large key, right thumb both large keys
-    */
-   PPG_QMK_KEYPOS_CHORD_ACTION_KEYCODE(
-      ff_layer_base,
-      F(ff_a_single_chord),
-      KEY_52, // left thumb inner large key
-      KEY_5B, // right thumb inner large key
-      KEY_5A  // right thumb outer large key
-   );
-    
-   // Equivalent definition ...
-   //
-//    ppg_chord(
-//       ff_layer_base,
-//       PPG_QMK_ACTION_KEYCODE(
-//          F(ff_a_single_chord)
-//       ),
-//       PPG_QMK_KEYS(
-//          PPG_QMK_INPUT_FROM_KEYPOS(KEY_52),
-//          PPG_QMK_INPUT_FROM_KEYPOS(KEY_5B),
-//          PPG_QMK_INPUT_FROM_KEYPOS(KEY_5A)
-//       )
-//    );
-   
-   
    /* A single cluster of j, k and l (QWERTY).
+    * Note how a user callback is used as action.
     */
-   // This would be a simple version...
-//    PPG_QMK_KEYPOS_CLUSTER_ACTION_KEYCODE(
-//       ff_layer_base,
-//       F(ff_a_single_chord),
-//       CLUSTER_KEY_1,
-//       CLUSTER_KEY_2,
-//       CLUSTER_KEY_3
-//    )
-   
    ppg_token_set_action(
       PPG_QMK_KEYPOS_CLUSTER_ACTION_KEYCODE(
          ff_layer_base,
@@ -568,7 +509,7 @@ void init_papageno(void)
       )
    );
       
-   // Equivalent definition ...
+   // Alternative definition ...
    //
 //    ppg_cluster(
 //       ff_layer_base,
@@ -577,13 +518,13 @@ void init_papageno(void)
 //          (void*)(size_t)13 /*user data*/
 //       ),
 //       PPG_QMK_KEYS(
-//          PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_1),
-//          PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_2),
-//          PPG_QMK_INPUT_FROM_KEYPOS(CLUSTER_KEY_3)
+//          PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(CLUSTER_KEY_1),
+//          PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(CLUSTER_KEY_2),
+//          PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(CLUSTER_KEY_3)
 //       )
 //    );
    
-   /* A pattern to switch to the aux layer.
+   /* A pattern to switch to the qwerty layer.
     */
    PPG_QMK_KEYPOS_NOTE_LINE_ACTION_KEYCODE(
       ff_layer_base, // Layer
@@ -604,17 +545,14 @@ void init_papageno(void)
 //          TG(ff_layer_qwerty)
 //       ),
 //          PPG_QMK_KEYS(
-//             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_1),
-//             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_2),
-//             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_3),
-//             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_4),
-//             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_5),
-//             PPG_QMK_INPUT_FROM_KEYPOS(FF_BACK_LINE_6)
+//             PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(FF_BACK_LINE_1),
+//             PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(FF_BACK_LINE_2),
+//             PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(FF_BACK_LINE_3),
+//             PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(FF_BACK_LINE_4),
+//             PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(FF_BACK_LINE_5),
+//             PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(FF_BACK_LINE_6)
 //          )
 //    );
-   
-   // TODO: Define something based on keycodes and check precedence 
-   //       of keypos against keycodes
    
    ppg_global_compile();
    

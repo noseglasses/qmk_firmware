@@ -22,15 +22,15 @@
  * Papageno magic melodies as part of the qmk firmware.
  * 
  * As Papageno's definition of what is an input is very arbitrary, it is possible to
- * use keyboard matix coordinates as well as qmk keycodes to define keys (notes in Papageno jargon).
+ * use keyboard matix coordinates as well as qmk keycodes to define keys (=inputs in Papageno jargon).
  * 
  * Key press and release actions are passed to Papageno.
- * Use the macro PPG_QMK_INPUT_FROM_KEYPOS to specify a physical key with respect to its
+ * Use the macro PPG_QMK_INPUT_FROM_KEYPOS_ALIAS to specify a physical key with respect to its
  * hexadecimal row and column ids or the macro PPG_QMK_KEYCODE_KEY to specify a qmk keycode
  * as key identifier.
  * 
- * Be careful with layer switching actions as they abort
- * pattern matching.
+ * Please note that layer switching aborts
+ * matching of the current pattern and flushes all keypress events that queued up.
 */
 
 #include "papageno.h"
@@ -286,10 +286,10 @@ __NL__   };
 #define PPG_QMK_INPUT_FROM_KEYPOS_CALL(COL_HEX, ROW_HEX) \
    ppg_qmk_input_id_from_keypos(0x##ROW_HEX, 0x##COL_HEX)
    
-#define PPG_QMK_INPUT_FROM_KEYPOS(KEYPOS_ALIAS) \
+#define PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(KEYPOS_ALIAS) \
    PPG_QMK_KEYPOS_ENUM(KEYPOS_ALIAS)
    
-#define PPG_QMK_INPUT_FROM_KEYCODE(KEYCODE_ALIAS) \
+#define PPG_QMK_INPUT_FROM_KEYCODE_ALIAS(KEYCODE_ALIAS) \
    PPG_QMK_KEYCODE_ENUM(KEYCODE_ALIAS)
    
 #define PPG_QMK_ADD_ONE(KEYPOS_ALIAS) \
@@ -325,7 +325,10 @@ __NL__   PPG_QMK_STORE_N_INPUTS
 #include "boost/preprocessor/list/for_each.hpp"
 
 #define PPG_QMK_NOTE_CREATE_STANDARD_KEYPOS(r, data, elem) \
-__NL__   ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS(elem)),
+__NL__   ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(elem)),
+
+#define PPG_QMK_NOTE_CREATE_STANDARD_KEYCODE(r, data, elem) \
+__NL__   ppg_note_create_standard(PPG_QMK_INPUT_FROM_KEYCODE_ALIAS(elem)),
    
 #define PPG_QMK_ACTION_GENERATOR_KEYCODE(KEYCODE) \
 __NL__   PPG_QMK_ACTION_KEYCODE( \
@@ -346,6 +349,10 @@ __NL__      ), \
 __NL__      ACTION_GENERATOR(ACTION) \
 __NL__   )
    
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Single note lines
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 #define PPG_QMK_KEYPOS_NOTE_LINE_ACTION_KEYCODE(LAYER, ACTION, ...) \
    \
    PPG_QMK_PATTERN__(LAYER,  \
@@ -355,8 +362,20 @@ __NL__   )
                      __VA_ARGS__ \
    )
    
+#define PPG_QMK_KEYCODE_NOTE_LINE_ACTION_KEYCODE(LAYER, ACTION, ...) \
+   \
+   PPG_QMK_PATTERN__(LAYER,  \
+                     ACTION,  \
+                     PPG_QMK_NOTE_CREATE_STANDARD_KEYCODE,  \
+                     PPG_QMK_ACTION_GENERATOR_KEYCODE, \
+                     __VA_ARGS__ \
+   )
+   
 #define PPG_QMK_KEYPOS_AGGREGATE_MEMBER__(r, data, elem) \
-__NL__   PPG_QMK_INPUT_FROM_KEYPOS(elem),
+__NL__   PPG_QMK_INPUT_FROM_KEYPOS_ALIAS(elem),
+
+#define PPG_QMK_KEYCODE_AGGREGATE_MEMBER__(r, data, elem) \
+__NL__   PPG_QMK_INPUT_FROM_KEYCODE_ALIAS(elem),
    
 #define PPG_QMK_AGGREGATE_TOKEN__(TYPE, NOTE_GENERATOR, ...) \
    \
@@ -364,12 +383,43 @@ __NL__    PPG_##TYPE##_CREATE( \
 __NL__      BOOST_PP_LIST_FOR_EACH(NOTE_GENERATOR, _, BOOST_PP_TUPLE_TO_LIST((__VA_ARGS__))) \
 __NL__    )
          
-#define PPG_QMK_KEYPOS_CHORD_TOKEN(...) PPG_QMK_AGGREGATE_TOKEN__(CHORD, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, __VA_ARGS__)
-#define PPG_QMK_KEYPOS_CLUSTER_TOKEN(...) PPG_QMK_AGGREGATE_TOKEN__(CLUSTER, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, __VA_ARGS__)
+#define PPG_QMK_KEYPOS_CHORD_TOKEN(...) \
+   \
+   PPG_QMK_AGGREGATE_TOKEN__( CHORD, \
+                              PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, \
+                              __VA_ARGS__)
+                              
+#define PPG_QMK_KEYCODE_CHORD_TOKEN(...) \
+   \
+   PPG_QMK_AGGREGATE_TOKEN__( CHORD, \
+                              PPG_QMK_KEYCODE_AGGREGATE_MEMBER__, \
+                              __VA_ARGS__)
+
+#define PPG_QMK_KEYPOS_CLUSTER_TOKEN(...) \
+   \
+   PPG_QMK_AGGREGATE_TOKEN__( CLUSTER, \
+                              PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, \
+                              __VA_ARGS__)
+                              
+#define PPG_QMK_KEYCODE_CLUSTER_TOKEN(...) \
+   \
+   PPG_QMK_AGGREGATE_TOKEN__( CLUSTER, \
+                              PPG_QMK_KEYCODE_AGGREGATE_MEMBER__, \
+                              __VA_ARGS__)
 
 #define PPG_QMK_KEYPOS_KEYS(...) \
 __NL__   PPG_QMK_KEYS( \
 __NL__      BOOST_PP_LIST_FOR_EACH(PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, _, BOOST_PP_TUPLE_TO_LIST((__VA_ARGS__))) \
+__NL__      \
+__NL__      /* The list generated above ends with a comma. To fix this, \
+__NL__       * we add a NULL ptr. Papageno can cope with that. \
+__NL__       */ \
+__NL__      /*NULL*/ \
+__NL__   )
+
+#define PPG_QMK_KEYCODE_KEYS(...) \
+__NL__   PPG_QMK_KEYS( \
+__NL__      BOOST_PP_LIST_FOR_EACH(PPG_QMK_KEYCODE_AGGREGATE_MEMBER__, _, BOOST_PP_TUPLE_TO_LIST((__VA_ARGS__))) \
 __NL__      \
 __NL__      /* The list generated above ends with a comma. To fix this, \
 __NL__       * we add a NULL ptr. Papageno can cope with that. \
@@ -386,11 +436,53 @@ __NL__         ACTION \
 __NL__      ), \
 __NL__      PPG_QMK_KEYPOS_KEYS(__VA_ARGS__) \
 __NL__   )
+   
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Chords
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 #define PPG_QMK_KEYPOS_CHORD_ACTION_KEYCODE(LAYER, ACTION, ...) \
-   PPG_QMK_AGGREGATE__(chord, LAYER, ACTION, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, PPG_QMK_ACTION_GENERATOR_KEYCODE, __VA_ARGS__)
+   PPG_QMK_AGGREGATE__( \
+                        chord, \
+                        LAYER, \
+                        ACTION, \
+                        PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, \
+                        PPG_QMK_ACTION_GENERATOR_KEYCODE,   \
+                        __VA_ARGS__ \
+   )
+   
+#define PPG_QMK_KEYCODE_CHORD_ACTION_KEYCODE(LAYER, ACTION, ...) \
+   PPG_QMK_AGGREGATE__( \
+                        chord,  \
+                        LAYER,  \
+                        ACTION,  \
+                        PPG_QMK_KEYCODE_AGGREGATE_MEMBER__,  \
+                        PPG_QMK_ACTION_GENERATOR_KEYCODE,  \
+                        __VA_ARGS__ \
+   )
   
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Clusters
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 #define PPG_QMK_KEYPOS_CLUSTER_ACTION_KEYCODE(LAYER, ACTION, ...) \
-   PPG_QMK_AGGREGATE__(cluster, LAYER, ACTION, PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, PPG_QMK_ACTION_GENERATOR_KEYCODE, __VA_ARGS__)
+   PPG_QMK_AGGREGATE__( \
+                        cluster, \
+                        LAYER, \
+                        ACTION, \
+                        PPG_QMK_KEYPOS_AGGREGATE_MEMBER__, \
+                        PPG_QMK_ACTION_GENERATOR_KEYCODE, \
+                        __VA_ARGS__ \
+   )
+   
+#define PPG_QMK_KEYCODE_CLUSTER_ACTION_KEYCODE(LAYER, ACTION, ...) \
+   PPG_QMK_AGGREGATE__( \
+                        cluster,  \
+                        LAYER,  \
+                        ACTION,  \
+                        PPG_QMK_KEYCODE_AGGREGATE_MEMBER__,  \
+                        PPG_QMK_ACTION_GENERATOR_KEYCODE,  \
+                        __VA_ARGS__ \
+   )
                 
 #endif
