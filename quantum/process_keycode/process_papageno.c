@@ -16,6 +16,8 @@
 
 #include "process_papageno.h"
 
+#include "tmk_core/common/action.h"
+
 static PPG_Event ppg_qmk_flush_queue[30];
 static uint8_t ppg_qmk_flush_queue_end;
 
@@ -206,6 +208,18 @@ static void ppg_qmk_delayed_flush_events(void)
       uint16_t keycode = 0;
       
       int16_t highest_keypos = ppg_qmk_highest_keypos_input();
+       
+      
+      // From tmk_core/common/action.c
+      //
+      #if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
+      if (has_oneshot_layer_timed_out()) {
+         clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+      }
+      if (has_oneshot_mods_timed_out()) {
+         clear_oneshot_mods();
+      }
+      #endif
    
       // Note: Input-IDs are assigned contiguously
       //
@@ -225,7 +239,7 @@ static void ppg_qmk_delayed_flush_events(void)
          // Keypos input-IDs already start from zero
          //
          keypos_t key = ppg_qmk_keypos_lookup[event->input];
-         
+
       //    uprintf("Event input %d\n", event->input);
       //    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
          
@@ -251,12 +265,11 @@ static void ppg_qmk_delayed_flush_events(void)
          PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
       }
       
-      uint16_t configured_keycode = keycode_config(keycode);
+      uprintf("kk: %u, a: %u\n", keycode, event->flags & PPG_Event_Active);
       
-      uprintf("kk: %u, ck: %u, a: %u\n", keycode, configured_keycode, event->flags & PPG_Event_Active);
+       ppg_qmk_enter_keycode(keycode, event->flags & PPG_Event_Active);
       
-//       ppg_qmk_enter_keycode(configured_keycode, event->flags & PPG_Event_Active);
-      
+#if 0
             /* Construct a dummy record
          */
          keyrecord_t record; 
@@ -266,11 +279,15 @@ static void ppg_qmk_delayed_flush_events(void)
             record.event.time = timer_read();
 //             
 //       ppg_qmk_process_event(keycode, &record);
+            
+   uprintf("osm 1: %u\n", get_oneshot_mods());
         
    action_t action = action_for_configured_keycode(configured_keycode); 
 
    process_action(&record, action);
       
+   uprintf("osm 2: %u\n", get_oneshot_mods());
+#endif
       
 //       if(event->flags & PPG_Event_Active) {
 //          register_code16(configured_keycode);
@@ -278,7 +295,7 @@ static void ppg_qmk_delayed_flush_events(void)
 //       else {
 //          unregister_code16(configured_keycode);
 //       }
-      
+
    }
 }
 

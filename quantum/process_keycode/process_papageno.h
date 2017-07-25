@@ -132,7 +132,6 @@ enum { PPG_QMK_Not_An_Input = (PPG_Input_Id)-1 };
 
 #define PPG_QMK_ACTION_KEYCODE(KK) \
 __NL__   (PPG_Action) { \
-__NL__      .flags = PPG_Action_Default, \
 __NL__      .callback = (PPG_Action_Callback) { \
 __NL__         .func = (PPG_Action_Callback_Fun)ppg_qmk_process_keycode,  \
 __NL__         .user_data = (void*)(uint16_t)KK \
