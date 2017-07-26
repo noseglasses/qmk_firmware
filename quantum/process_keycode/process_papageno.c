@@ -18,8 +18,12 @@
 
 #include "tmk_core/common/action.h"
 
+#define PPG_IMMEDIATE_EVENT_PROCESSING
+
+#ifndef PPG_IMMEDIATE_EVENT_PROCESSING
 static PPG_Event ppg_qmk_flush_queue[30];
 static uint8_t ppg_qmk_flush_queue_end;
+#endif
 
 #ifdef PPG_QMK_ERGODOX_EZ
 #include "ergodox.h"
@@ -133,6 +137,7 @@ void ppg_qmk_code_key_blocked(void)
 
 /* This function is defined in quantum/keymap_common.c 
  */
+
 action_t action_for_configured_keycode(uint16_t keycode);
 
 static void ppg_qmk_enter_keycode(uint16_t keycode, bool pressed)
@@ -162,12 +167,106 @@ static void ppg_qmk_enter_keycode(uint16_t keycode, bool pressed)
    action_t action = action_for_configured_keycode(configured_keycode); 
 
    process_action(&record, action);
-   
-   record.event.pressed = false;
-   record.event.time = timer_read();
-   
-   process_action(&record, action);
 }
+
+static void ppg_qmk_flush_event(PPG_Event *event)
+{
+   #ifdef PPG_QMK_ERGODOX_EZ
+   ppg_qmk_code_key_flushed();
+   #endif
+   
+   uint16_t keycode = 0;
+   
+   int16_t highest_keypos = ppg_qmk_highest_keypos_input();
+      
+   
+   // From tmk_core/common/action.c
+   //
+   #if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
+   if (has_oneshot_layer_timed_out()) {
+      clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+   }
+   if (has_oneshot_mods_timed_out()) {
+      clear_oneshot_mods();
+   }
+   #endif
+
+   // Note: Input-IDs are assigned contiguously
+   //
+   //       Input ids assigned to keypos-inputs are {0..PPG_Highest_Keypos_Input}
+   //       
+   //       Input ids assigned to keycode-inputs are {PPG_Highest_Keypos_Input + 1..PPG_Highest_Keycode_Input}
+
+   if(event->input > highest_keypos) {
+      
+      // Map the input to a range starting from zero to be suitable
+      // for lookup in the ppg_qmk_keycode_lookup array
+      //
+      keycode = ppg_qmk_keycode_lookup[event->input - highest_keypos - 1];
+   }
+   else {
+   
+      // Keypos input-IDs already start from zero
+      //
+      keypos_t key = ppg_qmk_keypos_lookup[event->input];
+
+   //    uprintf("Event input %d\n", event->input);
+   //    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
+      
+      
+   // The following was taken from quantum.c
+   
+      #if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
+      /* TODO: Use store_or_get_action() or a similar function. */
+      if (!disable_action_cache) {
+         uint8_t layer;
+
+         if (event->flags & PPG_Event_Active) {
+         layer = layer_switch_get_layer(key);
+         update_source_layers_cache(key, layer);
+         } else {
+         layer = read_source_layers_cache(key);
+         }
+         keycode = keymap_key_to_keycode(layer, key);
+      } else
+   #endif
+      keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
+               
+      PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
+   }
+   
+   uprintf("kk: %u, a: %u\n", keycode, event->flags & PPG_Event_Active);
+   
+       ppg_qmk_enter_keycode(keycode, event->flags & PPG_Event_Active);
+   
+#if 0
+      if(event->flags & PPG_Event_Active) {
+         register_code16(keycode);
+      }
+      else {
+         unregister_code16(keycode);
+      }
+#endif
+}
+
+#ifndef PPG_IMMEDIATE_EVENT_PROCESSING
+static void ppg_qmk_delayed_flush_events(void)
+{
+   if(ppg_qmk_flush_queue_end == 0) { return; }
+   
+   uprintf("del fl\n");
+   
+   uint8_t fqe = ppg_qmk_flush_queue_end;
+   ppg_qmk_flush_queue_end = 0;
+   
+   for(uint8_t i = 0; i < fqe; ++i) {
+
+      PPG_Event *event = ppg_qmk_flush_queue + i;
+      
+      ppg_qmk_flush_event(event);
+   }
+}
+#endif
 
 void ppg_qmk_process_event_callback(   
                               PPG_Event *event,
@@ -184,120 +283,14 @@ void ppg_qmk_process_event_callback(
       return; 
    }
    
+   #ifdef PPG_IMMEDIATE_EVENT_PROCESSING
+   ppg_qmk_flush_event(event);
+   #else
    ppg_qmk_flush_queue[ppg_qmk_flush_queue_end] = *event;
    ++ppg_qmk_flush_queue_end;
+   #endif
 }
 
-static void ppg_qmk_delayed_flush_events(void)
-{
-   if(ppg_qmk_flush_queue_end == 0) { return; }
-   
-   uprintf("del fl\n");
-   
-   uint8_t fqe = ppg_qmk_flush_queue_end;
-   ppg_qmk_flush_queue_end = 0;
-   
-   for(uint8_t i = 0; i < fqe; ++i) {
-
-      PPG_Event *event = ppg_qmk_flush_queue + i;
-      
-      #ifdef PPG_QMK_ERGODOX_EZ
-      ppg_qmk_code_key_flushed();
-      #endif
-      
-      uint16_t keycode = 0;
-      
-      int16_t highest_keypos = ppg_qmk_highest_keypos_input();
-       
-      
-      // From tmk_core/common/action.c
-      //
-      #if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
-      if (has_oneshot_layer_timed_out()) {
-         clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
-      }
-      if (has_oneshot_mods_timed_out()) {
-         clear_oneshot_mods();
-      }
-      #endif
-   
-      // Note: Input-IDs are assigned contiguously
-      //
-      //       Input ids assigned to keypos-inputs are {0..PPG_Highest_Keypos_Input}
-      //       
-      //       Input ids assigned to keycode-inputs are {PPG_Highest_Keypos_Input + 1..PPG_Highest_Keycode_Input}
-   
-      if(event->input > highest_keypos) {
-         
-         // Map the input to a range starting from zero to be suitable
-         // for lookup in the ppg_qmk_keycode_lookup array
-         //
-         keycode = ppg_qmk_keycode_lookup[event->input - highest_keypos - 1];
-      }
-      else {
-      
-         // Keypos input-IDs already start from zero
-         //
-         keypos_t key = ppg_qmk_keypos_lookup[event->input];
-
-      //    uprintf("Event input %d\n", event->input);
-      //    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
-         
-         
-      // The following was taken from quantum.c
-      
-         #if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
-         /* TODO: Use store_or_get_action() or a similar function. */
-         if (!disable_action_cache) {
-            uint8_t layer;
-
-            if (event->flags & PPG_Event_Active) {
-            layer = layer_switch_get_layer(key);
-            update_source_layers_cache(key, layer);
-            } else {
-            layer = read_source_layers_cache(key);
-            }
-            keycode = keymap_key_to_keycode(layer, key);
-         } else
-      #endif
-         keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
-                  
-         PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
-      }
-      
-      uprintf("kk: %u, a: %u\n", keycode, event->flags & PPG_Event_Active);
-      
-       ppg_qmk_enter_keycode(keycode, event->flags & PPG_Event_Active);
-      
-#if 0
-            /* Construct a dummy record
-         */
-         keyrecord_t record; 
-            record.event.key.row = 0;
-            record.event.key.col = 0;
-            record.event.pressed = event->flags & PPG_Event_Active;
-            record.event.time = timer_read();
-//             
-//       ppg_qmk_process_event(keycode, &record);
-            
-   uprintf("osm 1: %u\n", get_oneshot_mods());
-        
-   action_t action = action_for_configured_keycode(configured_keycode); 
-
-   process_action(&record, action);
-      
-   uprintf("osm 2: %u\n", get_oneshot_mods());
-#endif
-      
-//       if(event->flags & PPG_Event_Active) {
-//          register_code16(configured_keycode);
-//       }
-//       else {
-//          unregister_code16(configured_keycode);
-//       }
-
-   }
-}
 
 void ppg_qmk_flush_events(void)
 {  
@@ -316,6 +309,10 @@ void ppg_qmk_process_keycode(void *user_data) {
    if(keycode != 0) {
       
       ppg_qmk_enter_keycode(keycode, true);
+      ppg_qmk_enter_keycode(keycode, false);
+      
+//       register_code16(keycode);
+//       unregister_code16(keycode);
    }
 }
 
@@ -359,7 +356,7 @@ __NL__                        record->event.key.col)
          //
          ppg_global_abort_pattern_matching();
          
-         return false; 
+         return false;
       }
 //    else {
 //       uprintf("input %u, keycode %d\n", input, keycode);
@@ -445,7 +442,9 @@ void ppg_qmk_set_timeout_ms(uint16_t timeout)
 
 void ppg_qmk_matrix_scan(void)
 {
+   #ifndef PPG_IMMEDIATE_EVENT_PROCESSING
    ppg_qmk_delayed_flush_events();
+   #endif
    
    ppg_timeout_check();
 }
