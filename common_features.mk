@@ -110,29 +110,7 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
 
     LDFLAGS += -lpapageno
     
-    SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c                                                                                                                    
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_aggregate_detail.c                                                                                                       
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_context_detail.c                                                                                                         
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_event_buffer_detail.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_furcation_detail.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_global_detail.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_input_detail.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_note_detail.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_pattern_detail.c 
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_signal_detail.c                                                                                                        
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/detail/ppg_token_detail.c                                                                                                         
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_bitfield.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_chord.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_cluster.c                                                                                                                       
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_context.c                                                                                                                       
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_event.c                                                                                                                          
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_global.c                                                                                                                          
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_input.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_note.c     
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_pattern.c   
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_tap_dance.c                                                                                                                     
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_time.c
-#     SRC += $(QUANTUM_DIR)/../lib/papageno/src/ppg_timeout.c
+    SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c       
 
 endif
 

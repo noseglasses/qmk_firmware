@@ -235,7 +235,7 @@ static void ppg_qmk_flush_event(PPG_Event *event)
       PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
    }
    
-   uprintf("kk: %u, a: %u\n", keycode, event->flags & PPG_Event_Active);
+   PPG_LOG("kk: %u, a: %u\n", keycode, event->flags & PPG_Event_Active);
    
        ppg_qmk_enter_keycode(keycode, event->flags & PPG_Event_Active);
    
@@ -253,8 +253,6 @@ static void ppg_qmk_flush_event(PPG_Event *event)
 static void ppg_qmk_delayed_flush_events(void)
 {
    if(ppg_qmk_flush_queue_end == 0) { return; }
-   
-   uprintf("del fl\n");
    
    uint8_t fqe = ppg_qmk_flush_queue_end;
    ppg_qmk_flush_queue_end = 0;
@@ -304,7 +302,7 @@ void ppg_qmk_process_keycode(void *user_data) {
    
    uint16_t keycode = (uint16_t)user_data;
       
-   uprintf("keycode %u\n", keycode);
+   //uprintf("keycode %u\n", keycode);
    
    if(keycode != 0) {
       
