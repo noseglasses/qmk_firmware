@@ -307,7 +307,9 @@ void ppg_qmk_process_keycode(void *user_data) {
    if(keycode != 0) {
       
       ppg_qmk_enter_keycode(keycode, true);
+      send_keyboard_report();
       ppg_qmk_enter_keycode(keycode, false);
+      send_keyboard_report();
       
 //       register_code16(keycode);
 //       unregister_code16(keycode);
