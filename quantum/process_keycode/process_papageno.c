@@ -17,6 +17,7 @@
 #include "process_papageno.h"
 
 #include "tmk_core/common/action.h"
+#include "tmk_core/common/action_tapping.h"
 
 #define PPG_IMMEDIATE_EVENT_PROCESSING
 
@@ -140,7 +141,11 @@ void ppg_qmk_code_key_blocked(void)
 
 action_t action_for_configured_keycode(uint16_t keycode);
 
-static void ppg_qmk_enter_keycode(uint16_t keycode, bool pressed)
+static void ppg_qmk_enter_keycode(uint16_t keycode, 
+                                  bool pressed,
+                                  uint16_t time,
+                                  bool synthesized
+                                 )
 {
    /* Construct a dummy record
    */
@@ -148,7 +153,8 @@ static void ppg_qmk_enter_keycode(uint16_t keycode, bool pressed)
       record.event.key.row = 0;
       record.event.key.col = 0;
       record.event.pressed = pressed;
-      record.event.time = timer_read();
+      record.event.time = time;
+      record.tap.count = 1;
       
    /* Use the quantum/tmk system to trigger the action
       * thereby using a fictituous key (0, 0) with which the action 
@@ -160,13 +166,15 @@ static void ppg_qmk_enter_keycode(uint16_t keycode, bool pressed)
       * modifier keys or MO(...), etc.
       */
    
+//    uprintf("keycode: %d, active: %d\n", keycode, pressed);
+   
    uint16_t configured_keycode = keycode_config(keycode);
    
-//       PPG_LOG("Passing keycode %u to qmk system\n", configured_keycode);
-   
    action_t action = action_for_configured_keycode(configured_keycode); 
-
+   
    process_action(&record, action);
+   
+//    dprintf("keycode = %d\n", keycode);
 }
 
 static void ppg_qmk_flush_event(PPG_Event *event)
@@ -178,18 +186,6 @@ static void ppg_qmk_flush_event(PPG_Event *event)
    uint16_t keycode = 0;
    
    int16_t highest_keypos = ppg_qmk_highest_keypos_input();
-      
-   
-   // From tmk_core/common/action.c
-   //
-   #if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
-   if (has_oneshot_layer_timed_out()) {
-      clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
-   }
-   if (has_oneshot_mods_timed_out()) {
-      clear_oneshot_mods();
-   }
-   #endif
 
    // Note: Input-IDs are assigned contiguously
    //
@@ -203,50 +199,29 @@ static void ppg_qmk_flush_event(PPG_Event *event)
       // for lookup in the ppg_qmk_keycode_lookup array
       //
       keycode = ppg_qmk_keycode_lookup[event->input - highest_keypos - 1];
+      
+      ppg_qmk_enter_keycode(keycode, 
+                        event->flags & PPG_Event_Active, 
+                        event->time,
+                        false /* not synthesized, i.e. already 
+                        partially processed by the qmk system */
+                     );
    }
    else {
    
       // Keypos input-IDs already start from zero
       //
-      keypos_t key = ppg_qmk_keypos_lookup[event->input];
-
-   //    uprintf("Event input %d\n", event->input);
-   //    uprintf("Flsh k rw %d, cl %d\n", key.row, key.col);
+      keyevent_t k_event = {
+         .key = ppg_qmk_keypos_lookup[event->input],
+         .pressed = event->flags & PPG_Event_Active,
+         .time = event->time
+      };
       
-      
-   // The following was taken from quantum.c
-   
-      #if !defined(NO_ACTION_LAYER) && defined(PREVENT_STUCK_MODIFIERS)
-      /* TODO: Use store_or_get_action() or a similar function. */
-      if (!disable_action_cache) {
-         uint8_t layer;
-
-         if (event->flags & PPG_Event_Active) {
-         layer = layer_switch_get_layer(key);
-         update_source_layers_cache(key, layer);
-         } else {
-         layer = read_source_layers_cache(key);
-         }
-         keycode = keymap_key_to_keycode(layer, key);
-      } else
-   #endif
-      keycode = keymap_key_to_keycode(layer_switch_get_layer(key), key);
-               
-      PPG_LOG("Snd. kc %u, act. = %u\n", keycode, event->flags & PPG_Event_Active);
+      // Let the qmk system process the event just as if it
+      // had just been detected during matrix scan
+      //
+      action_exec(k_event);
    }
-   
-   PPG_LOG("kk: %u, a: %u\n", keycode, event->flags & PPG_Event_Active);
-   
-       ppg_qmk_enter_keycode(keycode, event->flags & PPG_Event_Active);
-   
-#if 0
-      if(event->flags & PPG_Event_Active) {
-         register_code16(keycode);
-      }
-      else {
-         unregister_code16(keycode);
-      }
-#endif
 }
 
 #ifndef PPG_IMMEDIATE_EVENT_PROCESSING
@@ -289,7 +264,6 @@ void ppg_qmk_process_event_callback(
    #endif
 }
 
-
 void ppg_qmk_flush_events(void)
 {  
    ppg_event_buffer_iterate(
@@ -298,7 +272,7 @@ void ppg_qmk_flush_events(void)
    );
 }
 
-void ppg_qmk_process_keycode(void *user_data) {
+void ppg_qmk_process_keycode(bool activation, void *user_data) {
    
    uint16_t keycode = (uint16_t)user_data;
       
@@ -306,24 +280,21 @@ void ppg_qmk_process_keycode(void *user_data) {
    
    if(keycode != 0) {
       
-      ppg_qmk_enter_keycode(keycode, true);
-      send_keyboard_report();
-      ppg_qmk_enter_keycode(keycode, false);
-      send_keyboard_report();
-      
-//       register_code16(keycode);
-//       unregister_code16(keycode);
+      ppg_qmk_enter_keycode(keycode, 
+                            activation, 
+                            timer_read(), 
+                            true /* is synthesized */);
    }
 }
 
-bool ppg_qmk_process_event(
-            uint16_t keycode, 
-            keyrecord_t *record)
+void ppg_qmk_process_event(keyevent_t event)
 {   
+   uint16_t keycode = keymap_key_to_keycode(layer_switch_get_layer(event.key), event.key);
+   
    #define PPG_QMK_INPUT_CHECK_A \
 __NL__   ppg_qmk_input_id_from_keypos( \
-__NL__                        record->event.key.row, \
-__NL__                        record->event.key.col)
+__NL__                        event.key.row, \
+__NL__                        event.key.col)
 
    #define PPG_QMK_INPUT_CHECK_B \
          ppg_qmk_input_id_from_keycode(keycode)
@@ -356,7 +327,11 @@ __NL__                        record->event.key.col)
          //
          ppg_global_abort_pattern_matching();
          
-         return false;
+         // Let qmk process the key in a regular way
+         //
+         action_exec(event);
+         
+         return;
       }
 //    else {
 //       uprintf("input %u, keycode %d\n", input, keycode);
@@ -371,10 +346,10 @@ __NL__                        record->event.key.col)
    ppg_qmk_code_key_considered();
    #endif
    
-   PPG_Event event = {
+   PPG_Event p_event = {
       .input = input,
-      .time = (PPG_Time)record->event.time,
-      .flags = (record->event.pressed) 
+      .time = (PPG_Time)event.time,
+      .flags = (event.pressed) 
                      ? PPG_Event_Active : PPG_Event_Flags_Empty
    };
    
@@ -382,9 +357,7 @@ __NL__                        record->event.key.col)
    
    ppg_global_set_layer(cur_layer);
    
-   ppg_event_process(&event);
-   
-   return true;
+   ppg_event_process(&p_event);
 }
 
 void ppg_qmk_time(PPG_Time *time)
@@ -426,6 +399,9 @@ void ppg_qmk_signal_callback(PPG_Signal_Id signal_id, void *user_data)
          ppg_qmk_flush_events();
          break;
       case PPG_On_Match_Failed:
+         break;      
+      case PPG_On_Flush_Events:
+         ppg_qmk_flush_events();
          break;
       default:
          return;

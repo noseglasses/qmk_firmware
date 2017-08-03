@@ -61,11 +61,9 @@ void ppg_qmk_signal_callback(PPG_Signal_Id signal_id, void *user_data);
 
 void ppg_qmk_flush_key_events(void);
 
-void ppg_qmk_process_keycode(void *user_data);
+void ppg_qmk_process_keycode(bool activation, void *user_data);
 
-bool ppg_qmk_process_event(
-                        uint16_t keycode, 
-                        keyrecord_t *record);
+void ppg_qmk_process_event(keyevent_t event);
 
 void ppg_qmk_time(         PPG_Time *time);
 
@@ -161,10 +159,7 @@ __NL__            = (PPG_Time_Difference_Fun)ppg_qmk_time_difference, \
 __NL__         .compare_times \
 __NL__            = (PPG_Time_Comparison_Fun)ppg_qmk_time_comparison \
 __NL__      } \
-__NL__   ); \
-__NL__   \
-__NL__   ppg_global_set_number_of_inputs( \
-__NL__      sizeof(ppg_qmk_keypos_lookup)/sizeof(keypos_t));
+__NL__   );
    
 #define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
 
