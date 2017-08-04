@@ -163,8 +163,10 @@ __NL__   );
    
 #define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
 
+#define PPG_QMK_TRICAT(S1, S2, S3) S1##S2##S3
+
 #define PPG_QMK_KEYPOS_ENUM(KEYPOS_NAME) \
-   PPG_##KEYPOS_NAME##_Keypos_Name
+   PPG_QMK_TRICAT(PPG_, KEYPOS_NAME, _Keypos_Name)
 
 #define PPG_QMK_CONVERT_KEYPOS_TO_CASE_LABEL(COL_HEX, ROW_HEX) \
    256*0x##ROW_HEX + 0x##COL_HEX
