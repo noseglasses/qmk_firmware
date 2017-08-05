@@ -120,6 +120,38 @@ enum { PPG_QMK_Not_An_Input = (PPG_Input_Id)-1 };
 
 #define __NL__
 
+#define PPG_QMK_STRINGIZE(S) #S
+
+#ifdef PAPAGENO_COMPRESSION_ENABLED
+
+   #define PPG_QMK_COMPRESSION_REGISTER_SYMBOL(S) \
+         PPG_COMPRESSION_REGISTER_SYMBOL(ccontext, S)
+   
+   #define PPG_QMK_INIT_COMPRESSION \
+\
+__NL__   PPG_Compression_Context ccontext =  \
+__NL__              ppg_compression_init(); \
+__NL__   \
+__NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(ppg_qmk_process_keycode) \
+__NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(  \
+                                       ppg_qmk_process_event_callback)
+
+   #define PPG_QMK_COMPRESSION_RUN \
+__NL__   ppg_compression_run(ccontext, noseglasses); \
+__NL__   ppg_compression_finalize(ccontext);
+
+#else
+
+   #define PPG_QMK_COMPRESSION_REGISTER_SYMBOL(S)
+   #define PPG_QMK_INIT_COMPRESSION
+   #define PPG_QMK_COMPRESSION_RUN
+#endif
+
+#define PPG_QMK_COMPILE \
+ \
+         ppg_global_compile(); \
+__NL__   PPG_QMK_COMPRESSION_RUN
+
 #define PPG_QMK_KEYPOS_HEX(COL_HEX, ROW_HEX, S___) \
    S___(COL_HEX, ROW_HEX)
    
