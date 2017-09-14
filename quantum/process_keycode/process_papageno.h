@@ -137,14 +137,26 @@ __NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(  \
                                        ppg_qmk_process_event_callback)
 
    #define PPG_QMK_COMPRESSION_RUN \
-__NL__   ppg_compression_run(ccontext, noseglasses); \
+__NL__   ppg_compression_run(ccontext, "noseglasses"); \
 __NL__   ppg_compression_finalize(ccontext);
+
+   #define PPG_QMK_COMPRESSION_REGISTER_SYMBOLS(REGISTRATION_MFUNC) \
+      REGISTRATION_MFUNC(PPG_QMK_COMPRESSION_REGISTER_SYMBOL)
+      
+   #define PPG_QMK_COMPRESSION_CALLBACK_STUB(NAME) \
+      void NAME(void) {}
+      
+   #define PPG_QMK_COMPRESSION_PREPARE_SYMBOLS(REGISTRATION_MFUNC) \
+      REGISTRATION_MFUNC(PPG_QMK_COMPRESSION_CALLBACK_STUB)
 
 #else
 
    #define PPG_QMK_COMPRESSION_REGISTER_SYMBOL(S)
    #define PPG_QMK_INIT_COMPRESSION
    #define PPG_QMK_COMPRESSION_RUN
+   
+   #define PPG_QMK_COMPRESSION_REGISTER_SYMBOLS(REGISTRATION_MFUNC)
+   #define PPG_QMK_COMPRESSION_PREPARE_SYMBOLS(REGISTRATION_MFUNC)
 #endif
 
 #define PPG_QMK_COMPILE \
@@ -191,7 +203,9 @@ __NL__            = (PPG_Time_Difference_Fun)ppg_qmk_time_difference, \
 __NL__         .compare_times \
 __NL__            = (PPG_Time_Comparison_Fun)ppg_qmk_time_comparison \
 __NL__      } \
-__NL__   );
+__NL__   ); \
+__NL__   \
+__NL__   PPG_QMK_INIT_COMPRESSION
    
 #define PPG_QMK_KEYS(...) PPG_INPUTS(__VA_ARGS__)
 
