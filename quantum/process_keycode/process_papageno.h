@@ -37,6 +37,12 @@
 #include "quantum.h"
 #include "tmk_core/common/keyboard.h"
 
+#ifdef PAPAGENO_COMPRESSION_ENABLED
+#define PPG_CALLBACK__(...) { return __VA_ARGS__; }
+#else
+#define PPG_CALLBACK__(...) ;
+#endif
+
 // Enable the flag below if you want to compile 
 // led effects for ErgoDox EZ
 //
@@ -55,28 +61,28 @@ extern int16_t ppg_qmk_highest_keypos_input(void);
 
 void ppg_qmk_process_event_callback(   
                         PPG_Event *key_event,
-                        void *user_data);
+                        void *user_data) PPG_CALLBACK__()
 
-void ppg_qmk_signal_callback(PPG_Signal_Id signal_id, void *user_data);
+void ppg_qmk_signal_callback(PPG_Signal_Id signal_id, void *user_data) PPG_CALLBACK__()
 
 void ppg_qmk_flush_key_events(void);
 
-void ppg_qmk_process_keycode(bool activation, void *user_data);
+void ppg_qmk_process_keycode(bool activation, void *user_data) PPG_CALLBACK__()
 
 void ppg_qmk_process_event(keyevent_t event);
 
-void ppg_qmk_time(         PPG_Time *time);
+void ppg_qmk_time(         PPG_Time *time) PPG_CALLBACK__()
 
 void  ppg_qmk_time_difference(
                         PPG_Time time1,
                         PPG_Time time2,
-                        PPG_Time *delta);
+                        PPG_Time *delta) PPG_CALLBACK__()
 
 int8_t ppg_qmk_time_comparison(
                         PPG_Time time1,
-                        PPG_Time time2);
+                        PPG_Time time2) PPG_CALLBACK__(0)
 
-void ppg_qmk_set_timeout_ms(uint16_t timeout);
+void ppg_qmk_set_timeout_ms(uint16_t timeout) PPG_CALLBACK__()
 
 void ppg_qmk_matrix_scan(void);
 
@@ -131,6 +137,8 @@ enum { PPG_QMK_Not_An_Input = (PPG_Input_Id)-1 };
 \
 __NL__   PPG_Compression_Context ccontext =  \
 __NL__              ppg_compression_init(); \
+__NL__   \
+__NL__   printf("Compression initialized\n"); \
 __NL__   \
 __NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(ppg_qmk_process_keycode) \
 __NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(  \
