@@ -34,8 +34,10 @@
 */
 
 #include "papageno.h"
-#include "quantum.h"
+// #include "quantum.h"
+#include "tmk_core/common/keycode.h"
 #include "tmk_core/common/keyboard.h"
+#include "quantum/quantum_keycodes.h"
 
 #ifdef PAPAGENO_COMPRESSION_ENABLED
 #define PPG_CALLBACK__(...) { return __VA_ARGS__; }

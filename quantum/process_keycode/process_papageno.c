@@ -16,6 +16,7 @@
 
 #include "process_papageno.h"
 
+#include "quantum.h"
 #include "tmk_core/common/action.h"
 #include "tmk_core/common/action_tapping.h"
 
