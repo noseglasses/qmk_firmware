@@ -104,16 +104,15 @@ ifeq ($(strip $(PAPAGENO_ENABLE)), yes)
     
     EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/src
     EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/3rd_party
-    EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/build/avr-gcc/src
+    EXTRAINCDIRS += $(QUANTUM_DIR)/../lib/papageno/build/atmega32u4/src
 
-    LDFLAGS += -Wl,-L$(QUANTUM_DIR)/../lib/papageno/build/avr-gcc/src
+    LDFLAGS += -Wl,-L$(QUANTUM_DIR)/../lib/papageno/build/atmega32u4/src
 
     LDFLAGS += -lpapageno
     
     SRC += $(QUANTUM_DIR)/process_keycode/process_papageno.c       
 
 endif
-
 
 ifeq ($(strip $(PRINTING_ENABLE)), yes)
     OPT_DEFS += -DPRINTING_ENABLE

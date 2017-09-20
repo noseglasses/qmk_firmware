@@ -134,7 +134,6 @@ void ppg_qmk_code_key_blocked(void)
    ff_restore_led_state();
 }
 
-
 #endif // PPG_QMK_ERGODOX_EZ
 
 /* This function is defined in quantum/keymap_common.c 

@@ -93,6 +93,14 @@ void ppg_qmk_matrix_scan(void);
  */
 void ppg_qmk_flush_key_events(void);
 
+inline
+uint16_t ppg_qmk_report_keycode(uint16_t kk)
+{
+   PPG_LOG("   act. kk. 0x%" PRIXPTR "\n", (uintptr_t)kk);
+   
+   return kk;
+}
+
 #ifdef PPG_QMK_ERGODOX_EZ
 
 // Methods for LED-signals (e.g. to use on ErgoDox EZ)
@@ -140,8 +148,6 @@ enum { PPG_QMK_Not_An_Input = (PPG_Input_Id)-1 };
 __NL__   PPG_Compression_Context ccontext =  \
 __NL__              ppg_compression_init(); \
 __NL__   \
-__NL__   printf("Compression initialized\n"); \
-__NL__   \
 __NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(ppg_qmk_process_keycode) \
 __NL__   PPG_QMK_COMPRESSION_REGISTER_SYMBOL(  \
                                        ppg_qmk_process_event_callback)
@@ -186,13 +192,11 @@ __NL__   PPG_QMK_COMPRESSION_RUN
 __NL__   (PPG_Action) { \
 __NL__      .callback = (PPG_Action_Callback) { \
 __NL__         .func = (PPG_Action_Callback_Fun)ppg_qmk_process_keycode,  \
-__NL__         .user_data = (void*)(uint16_t)KK \
+__NL__         .user_data = (void*)(uint16_t)ppg_qmk_report_keycode(KK) \
 __NL__      } \
 __NL__   }
 
-#define PPG_QMK_INIT \
-__NL__   \
-__NL__   ppg_global_init(); \
+#define PPG_QMK_SETUP_NON_DEFAULT_MANAGERS \
 __NL__   \
 __NL__   ppg_global_set_default_event_processor( \
 __NL__      (PPG_Event_Processor_Fun)ppg_qmk_process_event_callback); \
@@ -214,6 +218,12 @@ __NL__         .compare_times \
 __NL__            = (PPG_Time_Comparison_Fun)ppg_qmk_time_comparison \
 __NL__      } \
 __NL__   ); \
+
+#define PPG_QMK_INIT \
+__NL__   \
+__NL__   ppg_global_init(); \
+__NL__   \
+__NL__   PPG_QMK_SETUP_NON_DEFAULT_MANAGERS \
 __NL__   \
 __NL__   PPG_QMK_INIT_COMPRESSION
    
