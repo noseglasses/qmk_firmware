@@ -28,7 +28,7 @@ static uint8_t ppg_qmk_flush_queue_end;
 #endif
 
 #ifdef PPG_QMK_ERGODOX_EZ
-#include "ergodox.h"
+#include "ergodox_ez.h"
 
 typedef struct {
    uint8_t DDRD__;
