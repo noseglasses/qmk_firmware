@@ -84,7 +84,11 @@ int8_t ppg_qmk_time_comparison(
                         PPG_Time time1,
                         PPG_Time time2) PPG_CALLBACK__(0)
 
-void ppg_qmk_set_timeout_ms(uint16_t timeout) PPG_CALLBACK__()
+inline
+void ppg_qmk_set_timeout_ms(uint16_t timeout)
+{
+   ppg_global_set_timeout((PPG_Time)timeout);
+}
 
 void ppg_qmk_matrix_scan(void);
 

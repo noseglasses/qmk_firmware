@@ -276,7 +276,7 @@ void ppg_qmk_process_keycode(bool activation, void *user_data) {
    
    uint16_t keycode = (uint16_t)user_data;
       
-   //uprintf("keycode %u\n", keycode);
+//    uprintf("keycode %u\n", keycode);
    
    if(keycode != 0) {
       
@@ -321,6 +321,8 @@ __NL__                        event.key.col)
       input = PPG_QMK_INPUT_CHECK_2;
       
       if(input == PPG_QMK_Not_An_Input) { 
+         
+         PPG_LOG("not an input\n");
 
          // Whenever a key occurs that is not an input,
          // we immediately abort pattern matching
@@ -333,9 +335,9 @@ __NL__                        event.key.col)
          
          return;
       }
-//    else {
-//       uprintf("input %u, keycode %d\n", input, keycode);
-//    }
+      else {
+         PPG_LOG("input %u, keycode %d\n", input, keycode);
+      }
    }
 // else {
 //    uprintf("input %u, row %u, col %u\n", input, record->event.key.row, 
@@ -411,10 +413,11 @@ void ppg_qmk_signal_callback(PPG_Signal_Id signal_id, void *user_data)
    #endif
 }
 
-void ppg_qmk_set_timeout_ms(uint16_t timeout)
-{
-   ppg_global_set_timeout((PPG_Time)timeout);
-}
+// void ppg_qmk_set_timeout_ms(uint16_t timeout)
+// {
+//    printf("ppg_qmk_set_timeout_ms: %d\n", (int)timeout);
+//    ppg_global_set_timeout((PPG_Time)timeout);
+// }
 
 void ppg_qmk_matrix_scan(void)
 {
