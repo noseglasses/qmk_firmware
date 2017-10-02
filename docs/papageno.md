@@ -1,15 +1,37 @@
 
 # Papageno: Turn your keyboard into a magical musical instrument
 
-Most modern ergonomic keyboards come with thumb clusters motivated by the obvious under-utilization of the thumbs on traditional computer keyboards.
+## Motivation
 
-If there are dedicated thumb keys and the thumbs are the most powerful fingers it is reccomended to offload as much work as possible from the other fingers to the thumbs. In consequence this means that it is necesarry to assign as much functionality as possible to the typically restricted amount of reachable thumb keys. 
+### Thumb keys on ergonomic keyboards
+Most modern ergonomic keyboards come with thumb clusters. They are mainly motivated by the obvious under-utilization of the thumbs on traditional computer keyboards. 
+As our thumbs are the most powerful fingers it is desirable to shift as much work as possible from the other fingers to the thumbs. The number of (reachable) thumb keys differs between keyboard designs. Typically there are between four and eight (reachable) and freely programmable thumb keys available.
+This restriction in number means that when assigning keycodes or actions to the keys it is important to do it in a way that maximizes both, utilization and usability. In the past there have occured a significant number of innovative ideas that try to assign more than two keycodes or actions to a physical key.
 
-Tap-dances, an estimated feature that is part of QMK for a while now are one possible way to go, albeit not the perfect solution. This is because traditional tap-dances come with the restriction that a key needs to be hit multiple times to trigger an action. This can be difficult for a higher number of keystrokes of the same key, especially when one wants to distinguish between, say, three, four and five strokes. Even with a significant amount of training this can remain difficult, especially for non pianists.
+### Drawbacks of existing solutions
+Tap-dances, e.g. are one possible way to go. They theoretically allow to assign an infinite number of meanings to a single physical key. However, "traditional" tap-dances come with the restriction that a key needs to be hit multiple times to trigger an action. This can be difficult faily difficult to accomplish, especially when there are definitions for say, three, four and five strokes. Even with a significant amount of training it remains difficult to hit a given key a specific number of times in a short time interval. This is even more difficult for non pianists.
 
-So why not extend the concept of tap-dances to combinations of several keys. Wouldn't it be nice to trigger an action when several keys are hit in a predefined order. It is more simple to hit two keys in a row than the same key twice. Hitting two keys A and B in order A-B to generate a tabulator character and in order B-A to issue a shortcut that un-tabs a code line in you favorite text editor might be an example that hopefully demonstrates the power of this approach. It is both more easy from a neuromuscular point of view and quite intuitive in a sense that it assigns a forward-backward relation to tab and un-tab by the order of the two keys, especially provided key A is left of B (when used to reading and writing from left to right).
+### Multi-key tap-dances
+Why not extend the concept of tap-dances to combinations of several keys? It is much easier to hit two, three or more keys in a defined order, especially as that is precicesly what typists are trained to do.
+Of course, this implies that the keystrokes are consumed when the assigned action is triggered. So the action is supposed to replace the series of keycodes that is assigned with the keys when hit independently.
+Returning to where we came from, the thumb keys, this means that it would be useful to e.g. assign actions to combinations of two thumb keys that are assigned to the left and the right hand.
 
-To allow the described to work, we need a mechanism that is capable to recognize complex keystroke patterns. This very requirement led to the development of [Papageno](https://github.com/noseglasses/papageno/), an advanced pattern matching library that provides way more functionality than advanced tap-dances only. Originally implemented as integrated in QMK, Papageno emerged to a stand-alone multi-platform library that still seamlessly integrates with QMK.
+### Some numbers
+For a keyboard with two thumb keys for each hand, this would mean that we would end up with eight possible two-key combinations of thumb keys assigned to different hands. Hereby we assume that hitting two keys A and B in different orders has different meanings. If we combine these eight possibilities with the four possible actions assigned to keys it hit independently, this sums up to twelve different possibilities.
+It is up to you to compute the increase in number if we would also consider three-key combinations.
+
+### A simple real-live use case
+Let's look at a brief example how this could be used. Imagine editing some sort of source code. A common task is to indent lines, either to improve readability or because the language uses indentation as part of its semantic. Sometimes it is necessary to un-indent a line of code. Most editors assign shortcuts to both operations that are more or less simple to enter.
+As it is a failry common operation, it might be a good idea to perform indentation and un-indentation using thumb-keys. 
+
+We now assign the name A to one of the left hand thumb-keys and B to one of the right hand thumb keys. 
+One efficient solution for the given indentation/un-indentation task would be to trigger indentation 
+ when keys A and B are hit in order A-B and un-indentation when hit in order B-A. Both operations would of coures emit the shortcut necessary.
+This key-assignment is quite optimal from a neuromuscular point of view as it is very easy to learn. It is, moreover, quite intuitive in a sense that it assigns a forward-backward relation to tab and un-tab by the order of the two keys being hit.
+
+### Papageno - why it is there
+To bring the above example to live, we need a mechanism that is capable to recognize more or less complex keystroke patterns. This requirement, among others,
+led to the development of [Papageno](https://github.com/noseglasses/papageno/), an advanced pattern matching library. Originally implemented as integrated in QMK, Papageno emerged to a stand-alone multi-platform library that still seamlessly integrates with QMK. During its development it underwent quite an evolution that broadened its range of features in a way that goes far beyond advanced tap-dances.
 
 ## Example usage
 
