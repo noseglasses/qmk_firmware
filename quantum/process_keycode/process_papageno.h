@@ -383,6 +383,20 @@ __NL__   PPG_QMK_INIT_KEYCODE_LOOKUP \
 __NL__   \
 __NL__   PPG_QMK_STORE_N_INPUTS
 
+#define PPG_QMK_CONNECT \
+__NL__   \
+__NL__   void matrix_init_user(void) { \
+__NL__      init_papageno(); \
+__NL__   } \
+__NL__   \
+__NL__   void matrix_scan_user(void) { \
+__NL__      ppg_qmk_matrix_scan(); \
+__NL__   }; \
+__NL__   \
+__NL__   void action_exec_user(keyevent_t event) { \
+__NL__      ppg_qmk_process_event(event); \
+__NL__   }
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // Some macros to simplify definition of patterns
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
