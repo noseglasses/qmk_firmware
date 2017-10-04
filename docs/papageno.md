@@ -1,9 +1,14 @@
 
 # Papageno: Turn your keyboard into a magical musical instrument
 
-## Overview
+## Abstract
 
-An introduction of Papageno, its basic features and a motivation of its development and application is followed by an brief example how to use the Papageno-QMK API to define keymaps. Links to further documents that describe Papageno and its QMK-API are also provided.
+Define multi-key tap-dances, highly customizable leader key-sequences, chords, key-clusters or mixtures of it all. [Papageno](https://github.com/noseglasses/papageno/) an advanced pattern matching library seamlessly integrates with QMK to provide ultimate flexibility in the generation of multikey-commands. An automatized compression mechanism converts easy-to-define search-tree data structures into statically allocated, compile-time static compressed data-sets. This allows for Flash and RAM memory-saving definitions of large amounts of key-patterns in a clearly arranged fashion.
+See the [QMK-Papageno](papageno.md) page for detailed information.
+
+## Introduction
+
+A description of Papageno, its basic features and a motivation of its development and application is followed by a brief example how to use the Papageno-QMK API in `keymap.c` definitions. Links to further documents that describe Papageno and its QMK-API are provided at the end of the document.
 
 ## Motivation
 
