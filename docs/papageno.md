@@ -1,14 +1,13 @@
 
-# Papageno: Turn your keyboard into a magical musical instrument
+# Papageno-QMK: Turn your keyboard into a magical instrument
 
 ## Abstract
 
-Define multi-key tap-dances, highly customizable leader key-sequences, chords, key-clusters or mixtures of it all. [Papageno](https://github.com/noseglasses/papageno/) an advanced pattern matching library seamlessly integrates with QMK to provide ultimate flexibility in the generation of multikey-commands. An automatized compression mechanism converts easy-to-define search-tree data structures into statically allocated, compile-time static compressed data-sets. This allows for Flash and RAM memory-saving definitions of large amounts of key-patterns in a clearly arranged fashion.
-See the [QMK-Papageno](papageno.md) page for detailed information.
+Define multi-key tap-dances, highly customizable leader key-sequences, chords, key-clusters or mixtures of it all. [Papageno](https://github.com/noseglasses/papageno/) an advanced pattern matching library seamlessly integrates with QMK to provide ultimate flexibility in the generation of multi-key-commands. An automatized compression mechanism converts easy-to-define search-tree data structures into statically allocated, compile-time static compressed data-sets. This allows for Flash and RAM memory-saving definitions of large amounts of key-patterns in a clearly arranged fashion.
 
 ## Introduction
 
-A description of Papageno, its basic features and a motivation of its development and application is followed by a brief example how to use the Papageno-QMK API in `keymap.c` definitions. Links to further documents that describe Papageno and its QMK-API are provided at the end of the document.
+A description of Papageno, its basic features and a motivation of its development and application is followed by a brief example how to use the Papageno-QMK API in `key-map.c` definitions. Links to further documents that describe Papageno and its QMK-API are provided at the end of the document.
 
 ## Motivation
 
@@ -16,20 +15,20 @@ A description of Papageno, its basic features and a motivation of its developmen
 
 Most modern ergonomic keyboards come with dedicated thumb key clusters. These are mainly motivated by the obvious under-utilization of the thumbs on traditional computer keyboards. 
 As our thumbs are the most powerful fingers, it is desirable to shift as much work as possible from the other fingers towards the thumbs. The actual number of (reachable) thumb keys varies between different keyboard designs. Typically there are between four and eight (reachable) and freely programmable thumb keys available.
-This restriction in number means that when assigning keycodes or actions to these special keys it is important to do it in a way that optimizes both, utilization and usability. In the recent past there occured a significant number of innovative ideas that aim to assign more than two keycodes or actions to a physical key.
+This restriction in number means that when assigning key-codes or actions to these special keys it is important to do it in a way that optimizes both, utilization and usability. In the recent past there occurred a significant number of innovative ideas that aim to assign more than two key-codes or actions to a physical key.
 
 ### Existing QMK-features
 
-[Tap-dances](tap_dance.md), modifier keys, with and without one-touch, as well as multiple keymap-layers provied different ways to creatively assign work to thumb keys using QMK. These methods all have specific advantages and drawbacks. A thorough analysis of the many possible ways to utilize and combine those could fill a research article of its own. Therefore, we will concentrate on tap-dances to explain the enhancements introduced by Papageno. 
+[Tap-dances](tap_dance.md), modifier keys, with and without one-touch, as well as multiple key-map-layers provide different ways to creatively assign work to thumb keys using QMK. These methods all have specific advantages and drawbacks. A thorough analysis of the many possible ways to utilize and combine those could fill a research article of its own. Therefore, we will concentrate on tap-dances to explain the enhancements introduced by Papageno. 
 
-[Tap-dances](tap_dance.md) theoretically allow to assign an infinite number of meanings to a single physical key. A specificnumber of keypresses, usually entered in rapid succession, triggers a specific action.
-This is probably the only, but also the greatest disadvantage of *traditional* tap-dances. Hitting a key a given number of times in a row can be faily difficult to accomplish, especially for non pianists and when there are definitions for say, three, four and five strokes of the same key.
+[Tap-dances](tap_dance.md) theoretically allow to assign an infinite number of meanings to a single physical key. A specific number of key-presses, usually entered in rapid succession, triggers a specific action.
+This is probably the only, but also the greatest disadvantage of *traditional* tap-dances. Hitting a key a given number of times in a row can be fairly difficult to accomplish, especially for non pianists and when there are definitions for say, three, four and five strokes of the same key.
 
 ### Towards multi-key tap-dances
 
-As a keyboard comes with a multitude of keys, why not extend the concept of tap-dances to combinations of several keys? It is much easier to hit two, three or more keys in a defined order than to hit the same key a given number of times. Entering key sequences, i.e. words, is precicesly what typists are trained to do.
+As a keyboard comes with a multitude of keys, why not extend the concept of tap-dances to combinations of several keys? It is much easier to hit two, three or more keys in a defined order than to hit the same key a given number of times. Entering key sequences, i.e. words, is precisely what typists are trained to do.
  
-Of coures, we want the action that is triggered when the key sequence has been completed to replace the actual series of keycodes that is assigned with the keys when hit independently, same as with tap-dances.
+Of course, we want the action that is triggered when the key sequence has been completed to replace the actual series of key-codes that is assigned with the keys when hit independently, same as with tap-dances.
 
 ### Some numbers
 
@@ -60,13 +59,13 @@ led to the development of [Papageno](https://github.com/noseglasses/papageno/), 
 
 ## A QMK example
 
-The impatient may directly jump to a [QMK example keymap](https://github.com/noseglasses/noseglasses_qmk_layout/) that demonstrates how Papageno can be employed to effectively shift load from fingers to thumbs.
+The impatient may directly jump to a [QMK example key-map](https://github.com/noseglasses/noseglasses_qmk_layout/) that demonstrates how Papageno can be employed to effectively shift load from fingers to thumbs.
 
 ## Papageno-QMK
 
-Papageno allows for the definition of general multi-key patterns, chords, key clusters, arbitrary leader sequences with multiple leader keys and more. All features utilize the same efficient and optimized pattern matching algorithm. To be used with QMK, Papageno provides a wrapper API. It allows to define patterns in a simple and readable way and encapsules common tasks through C-preprocessor macros.
+Papageno allows for the definition of general multi-key patterns, chords, key clusters, arbitrary leader sequences with multiple leader keys and more. All features utilize the same efficient and optimized pattern matching algorithm. To be used with QMK, Papageno provides a wrapper API. It allows to define patterns in a simple and readable way and encapsules common tasks through C-pre-processor macros.
 
-The heart of Papageno is a search tree that is established based on the definitions that are part of user-implemented QMK keymap files.
+The heart of Papageno is a search tree that is established based on the definitions that are part of user-implemented QMK key-map files.
 As typical for dynamically assembled tree data structures, this tree-based approach relies on dynamic memory allocation. Many believe that dynamically allocated data structures are a no-go on embedded architectures, such as those used in programmable keyboards. Actually, it is not that much of a hindrance as Papageno mainly allocates memory but does not free it during program execution. This inherently avoids RAM fragmentation which would otherwise lead to an early exhaustion of RAM. 
 
 To optimize the utilization of both, Flash memory and SRAM, Papageno comes with an integrated compression mechanism.
@@ -77,9 +76,9 @@ Where the dynamic creation of tree data structures works well for a moderate amo
 
 Before we talk about compression of data structures, let us look at the two modes of operation, that Papageno provides. The first and general one requires the generation of dynamic data structures during firmware execution on the keyboard. The second, a more advanced and optimized mode of operation allows for a two stage compile process that compresses most of Papageno's data structures and aims to be as memory efficient as possible, both with respect to flash memory and RAM.
 
-This integrated compression mechanism turns the dynamically allocated pattern matching search tree into a compile-time static data structure. We, thus, avoid dynamic memory allocations and significantly shrink binary size. Appart from the sheer compactification of data structures, compression also helps to safe program memory as no code is required to establish dynamic data structures during firmware execution. The respective C-functions are, therefore, automatically stripped from the binary as part of the firmware build process. 
+This integrated compression mechanism turns the dynamically allocated pattern matching search tree into a compile-time static data structure. We, thus, avoid dynamic memory allocations and significantly shrink binary size. Apart from the sheer compactification of data structures, compression also helps to safe program memory as no code is required to establish dynamic data structures during firmware execution. The respective C-functions are, therefore, automatically stripped from the binary as part of the firmware build process. 
 
-When applied to [noseglasses'](https://github.com/noseglasses/noseglasses_qmk_layout/) QMK-keymap compiled for an ErgoDox EZ, Papageno's compression mechanism reduces the size of the emerging hex-file by 2420 byte. Program storage and RAM saved can e.g. be used for other valuable QMK features.
+When applied to [noseglasses'](https://github.com/noseglasses/noseglasses_qmk_layout/) QMK-key-map compiled for an ErgoDox EZ, Papageno's compression mechanism reduces the size of the emerging hex-file by 2420 byte. Program storage and RAM saved can e.g. be used for other valuable QMK features.
 
 ## Compatibility with existing QMK features
 
@@ -92,29 +91,29 @@ Although optimized resource utilization is never a bad idea, Papageno plays alon
 
 ## Papageno as a wrapper to QMK
 
-Papageno-QMK is designed as a wrapper for the rest of QMK. Any keystrokes are intercepted and passed through Papageno's pattern matching engine. Only if a series of keystrokes is identified as non-matching any defined pattern, it is passed over to the main QMK engine. To QMK these keystrokes appear as if they had just emerged duing the most recent keyboard matrix scan.
+Papageno-QMK is designed as a wrapper for the rest of QMK. Any keystrokes are intercepted and passed through Papageno's pattern matching engine. Only if a series of keystrokes is identified as non-matching any defined pattern, it is passed over to the main QMK engine. To QMK these keystrokes appear as if they had just emerged during the most recent keyboard matrix scan.
 
 This allows for a strong decoupling of Papageno and QMK that is robust and can be expected to work quite well with most other features provided by QMK.
 
-For compatibility reasons, Papageno provides a layer mechanism that is fairly similay to that of QMK's keymaps. At their point of definition, patterns are associated with layers. They are only active while their associated layer is activated, which is controlled by the rest of QMK.
-Layer fallthrough, works similar to the assignment of transparent keycodes in QMK keymaps.
+For compatibility reasons, Papageno provides a layer mechanism that is fairly similay to that of QMK's key-maps. At their point of definition, patterns are associated with layers. They are only active while their associated layer is activated, which is controlled by the rest of QMK.
+Layer fall through, works similar to the assignment of transparent key-codes in QMK key-maps.
 
-It is most common to emit QMK keycodes when a defined pattern matches a series of keystrokes.
+It is most common to emit QMK key-codes when a defined pattern matches a series of keystrokes.
 To allow for more advanced functionality Papageno provides an interface to define arbitrary user callback functions that can be supplied with user defined data.
 
 ## An introduction to Papageno' QMK API
 
 ### Key definitions
 
-Papageno as integrated with QMK operates on key-positions or key-codes as building blocks for patterns. Using key-positions means that a physical key, i.d. the keyswitch at a given position on the keyboard is assigned with an identifier. QMK/TMK keycodes can also be assigned an identifier that is used by Papageno for pattern matching. This means that several keys that have been assigned the same keycode have the same meaning during pattern matching.
+Papageno as integrated with QMK operates on key-positions or key-codes as building blocks for patterns. Using key-positions means that a physical key, i.d. the key-switch at a given position on the keyboard is assigned with an identifier. QMK/TMK key-codes can also be assigned an identifier that is used by Papageno for pattern matching. This means that several keys that have been assigned the same key-code have the same meaning during pattern matching.
 
-To enable keycode lookup, keystrokes are passed through QMK's lookup engine to determine the keycode that is defined in the keymap of the current layer. The keycode found is then passed over to Papageno's pattern matching engine.
+To enable key-code lookup, keystrokes are passed through QMK's lookup engine to determine the key-code that is defined in the key-map of the current layer. The key-code found is then passed over to Papageno's pattern matching engine.
 
 As it is the more common approach, we will restrict the provided example below to the use of key-positions as building blocks of pattern definitions.
 
 ### Using key-positions to define patterns
 
-To use key-positions as tokens to define patterns, add the following code to your keymap. The example assumes that we want to assign names to the matrix keyposition `(5,2)` and `(5,B)` which represent the left and right inner thumb keys on an ErgoDox EZ. 
+To use key-positions as tokens to define patterns, add the following code to your key-map. The example assumes that we want to assign names to the matrix key-position `(5,2)` and `(5,B)` which represent the left and right inner thumb keys on an ErgoDox EZ. 
 
 Please note the auxiliary macro parameter `S`. It is necessary for implementation purposes. The parameter name `S` can be replaced arbitrarily.
 
@@ -127,7 +126,7 @@ All keys that are supposed to be used in Papageno patterns must be macro-defined
 
 ### Initialization of the pattern matching engine
 
-To set up Papageno patterns it is recommended to define a dedicated initialization function. The name `init_papageno` can be arbitrarily replaced. However, please note that some auxiliary macros might rely on the name beeing `init_papageno` when used.
+To set up Papageno patterns it is recommended to define a dedicated initialization function. The name `init_papageno` can be arbitrarily replaced. However, please note that some auxiliary macros might rely on the name being `init_papageno` when used.
 
 ```C
 void init_papageno(void)
@@ -144,7 +143,7 @@ void init_papageno(void)
    ppg_qmk_set_timeout_ms(200);
    
    // Left inner and right inner thumb key are supposed to 
-   // trigger emission of the enter keycode (KC_ENTER) if clustered,
+   // trigger emission of the enter key-code (KC_ENTER) if clustered,
    // i.e. when hit one after the other in arbitrary order.
    //
    PPG_QMK_KEYPOS_CLUSTER_ACTION_KEYCODE(
@@ -193,7 +192,7 @@ void matrix_scan_user(void)
 };
 ```
 
-The actualy keypress handling is performed by an overriden version of `action_exec_user`.
+The actually key-press handling is performed by an overriden version of `action_exec_user`.
 ```C
 void action_exec_user(keyevent_t event)
 {
@@ -207,11 +206,11 @@ If no other tasks are to be performed by the overridden QMK-interface functions,
 
 ### A small working example
 
-The following could be a `keymap.c` file that uses Papageno.
+The following could be a `key-map.c` file that uses Papageno.
 ```C
 #include "process_papageno.h"
 
-// ... define your QMK-keycodes here
+// ... define your QMK-key-codes here
 
 #define LEFT_INNER_THUMB_KEY(S) NG_KEYPOS(5, 2, S)
 #define RIGHT_INNER_THUMB_KEY(S) NG_KEYPOS(5, B, S)
@@ -241,8 +240,8 @@ PPG_QMK_CONNECT
 
 For matters of simplicity, the introductory example above only demonstrates one of the many features provided by Papageno. A complete documentation of Papageno's QMK-API goes far beyond the scope of this document. 
 
-The application of a large portion of Papageno's features is exemplified with the help of noseglasses' [QMK-keymap](https://github.com/noseglasses/noseglasses_qmk_layout/).
+The application of a large portion of Papageno's features is exemplified with the help of noseglasses' [QMK-key-map](https://github.com/noseglasses/noseglasses_qmk_layout/).
 
-Please see also the file `process_keycode/process_papageno.h` in the root directory of QMK's source tree. It contains the definition of the overall Papageno-QMK API in terms of C-functions and utility pre-processor macros.
+Please see also the file `process_key-code/process_papageno.h` in the root directory of QMK's source tree. It contains the definition of the overall Papageno-QMK API in terms of C-functions and utility pre-processor macros.
 
-All of the functions and macros defined in `process_keycode/process_papageno.h` are some sort of wrappers to the actual Papageno API [Papageno API](https://github.com/noseglasses/papageno/).
+All of the functions and macros defined in `process_key-code/process_papageno.h` are some sort of wrappers to the actual Papageno API [Papageno API](https://github.com/noseglasses/papageno/).
