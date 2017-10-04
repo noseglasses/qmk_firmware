@@ -124,6 +124,52 @@ Please note the auxiliary macro parameter `S`. It is necessary for implementatio
 
 All keys that are supposed to be used in Papageno patterns must be macro-defined in the provided way.
 
+All key-positions must be registered with Papageno by defining a macro `PPG_QMK_MATRIX_POSITION_INPUTS` that registers all key-position macros that we have defined.
+
+```C
+// Define a set of Papageno inputs that are associated with
+// keyboard matrix positions.
+//
+// Important: - The macro must be named PPG_QMK_MATRIX_POSITION_INPUTS!
+//            - If no inputs are supposed to be associated with
+//              matrix positions, define an empty PPG_QMK_MATRIX_POSITION_INPUTS
+//
+#define PPG_QMK_MATRIX_POSITION_INPUTS(OP) \
+\
+__NL__      OP(LEFT_INNER_THUMB_KEY) \
+__NL__      OP(RIGHT_INNER_THUMB_KEY)
+```
+
+In the current example we concentrate on key-positions as input tokens. Nevertheless, we must inform Papageno of the key-codes (here none) that we want to use as input tokens.
+
+```C
+// Define a set of Papageno inputs that are associated with
+// qmk keycodes.
+//
+// Important: - The macro must be named PPG_QMK_KEYCOKC_INPUTS!
+//            - If no inputs are supposed to be associated with
+//              keycodes, define an empty PPG_QMK_KEYCOKC_INPUTS
+//
+#define PPG_QMK_KEYCODE_INPUTS(OP)
+```
+
+Finally, we initialize any global data structures used by Papageno-QMK.
+
+```C
+// Initialize Papageno data structures for qmk
+// This is based on the definitions of
+//
+//    PPG_QMK_MATRIX_POSITION_INPUTS
+//
+// and
+//
+//    PPG_QMK_KEYCODE_INPUTS
+//
+// and assumes these to be already defined.
+//
+PPG_QMK_INIT_DATA_STRUCTURES
+```
+
 ### Initialization of the pattern matching engine
 
 To set up Papageno patterns it is recommended to define a dedicated initialization function. The name `init_papageno` can be arbitrarily replaced. However, please note that some auxiliary macros might rely on the name being `init_papageno` when used.
@@ -206,14 +252,55 @@ If no other tasks are to be performed by the overridden QMK-interface functions,
 
 ### A small working example
 
-The following could be a `key-map.c` file that uses Papageno.
+The following is a short version of the keymap file `keyboards/ergodox_ex/keymaps/papageno/keymap.c' file that is part of the QMK source distribution.
+The example can be build for an ErgoDox EZ and with slight modifications (adapt the keymap definition to your keyboard) for any other keyboard that QMK supports. It demonstrates how the two inner thumb keys of the keyboard trigger emission of the key-code KC_ENTER when hit in arbitrary order.
+
 ```C
+#include QMK_KEYBOARD_H
+#include "debug.h"
+#include "action_layer.h"
+#include "version.h"
+
 #include "process_papageno.h"
 
 // ... define your QMK-key-codes here
 
-#define LEFT_INNER_THUMB_KEY(S) NG_KEYPOS(5, 2, S)
-#define RIGHT_INNER_THUMB_KEY(S) NG_KEYPOS(5, B, S)
+// Define key positions that are supposed to be used by Papageno
+//
+#define LEFT_INNER_THUMB_KEY(S)  PPG_QMK_KEYPOS_HEX(5, 2, S)
+#define RIGHT_INNER_THUMB_KEY(S) PPG_QMK_KEYPOS_HEX(5, B, S)
+
+// Define a set of Papageno inputs that are associated with
+// keyboard matrix positions.
+//
+// Important: - The macro must be named PPG_QMK_MATRIX_POSITION_INPUTS!
+//            - If no inputs are supposed to be associated with
+//              matrix positions, define an empty PPG_QMK_MATRIX_POSITION_INPUTS
+//
+#define PPG_QMK_MATRIX_POSITION_INPUTS(OP) \
+\
+__NL__      OP(LEFT_INNER_THUMB_KEY) \
+__NL__      OP(RIGHT_INNER_THUMB_KEY)
+
+// Define a set of Papageno inputs that are associated with
+// qmk keycodes.
+//
+// Important: - The macro must be named PPG_QMK_KEYCOKC_INPUTS!
+//            - If no inputs are supposed to be associated with
+//              keycodes, define an empty PPG_QMK_KEYCOKC_INPUTS
+//
+#define PPG_QMK_KEYCODE_INPUTS(OP)
+
+// Initialize Papageno data structures for qmk
+// This is based on the definitions of 
+//
+//    PPG_QMK_MATRIX_POSITION_INPUTS
+//
+// and
+//
+//    PPG_QMK_KEYCODE_INPUTS
+//
+PPG_QMK_INIT_DATA_STRUCTURES
 
 void init_papageno(void)
 {
